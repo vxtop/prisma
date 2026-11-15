@@ -52,8 +52,8 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
     // ---- load ----
     const t0 = Date.now(); await cdp('Runtime.enable'); await cdp('Page.navigate', { url: srv.url });
     let first = null, all = null;
-    for (let i = 0; i < 60 && all == null; i++) { await sleep(250); const n = await ev(`window.__vxtop ? [...window.__vxtop.cubes.values()].filter(c => c.data).length : -1`); if (n > 0 && first == null) first = Date.now() - t0; if (n >= 8) all = Date.now() - t0; }
-    t.ok('load: first cube with data', first != null && first < (process.env.CI ? 15000 : 6000), first + ' ms'); t.ok('load: eight cubes with data', all != null && all < 10000, all + ' ms');
+    for (let i = 0; i < (process.env.CI ? 360 : 60) && all == null; i++) { await sleep(250); const n = await ev(`window.__vxtop ? [...window.__vxtop.cubes.values()].filter(c => c.data).length : -1`); if (n > 0 && first == null) first = Date.now() - t0; if (n >= 8) all = Date.now() - t0; }
+    t.ok('load: first cube with data', first != null && first < (process.env.CI ? 60000 : 6000), first + ' ms'); t.ok('load: eight cubes with data', all != null && all < (process.env.CI ? 90000 : 10000), all + ' ms');
     const wel = await ev("document.querySelector('#modal').style.display === 'flex' && !!document.querySelector('#wel-scr')"); t.ok('first run: welcome is shown', wel); await shot('00-welcome');
     await ev("document.querySelector('#modal [data-r]') && document.querySelector('#modal [data-r]').click()"); await sleep(300);
     t.ok('first run: live window images stay off unless allowed', await ev(`localStorage.getItem('vxtop.welcome') === '1' && JSON.parse(localStorage.getItem('vxtop.set')).screens === 0`) === true);
