@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 virtuanista
 //
-// Generates the (temporary) vxtop mark: an isometric 3×3×3 voxel cube with one amber cell lit,
+// Generates the vxtop mark: an isometric 3×3×3 voxel cube with one amber cell lit,
 // as public/favicon.svg and docs/assets/logo.svg (mark + wordmark). Usage: node scripts/brand.js
 
 'use strict';

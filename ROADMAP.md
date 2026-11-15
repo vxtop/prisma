@@ -3,7 +3,7 @@
 Ideas and open work, roughly in order. Open an issue to discuss any of them.
 
 ## Next
-- **Identity** — final logo and favicon (the current ones are temporary); publish the website (`site/`).
+- **Release** — first public version (v0.6.0) on GitHub.
 - **Cube list** — keep the order stable while the live view changes.
 - **Toolbar** — group the unlabeled view buttons into a *View* menu.
 - **System view** — fewer overlapping labels around busy processes.
