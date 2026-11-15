@@ -40,7 +40,9 @@
     "README.es.md",
     "LICENSE",
     "NOTICE",
-    "docs/",
+    "docs/guia.md",
+    "docs/architecture.md",
+    "docs/en/",
     "scripts/"
   ],
   "scripts": {

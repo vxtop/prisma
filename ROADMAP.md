@@ -3,10 +3,10 @@
 Ideas and open work, roughly in order. Open an issue to discuss any of them.
 
 ## Next
-- **Name and identity** — final product name, logo and website.
-- **Labels with context** — `Local › AppData` instead of a bare `Local`; stable order in the cube list.
+- **Identity** — final logo and favicon (the current ones are temporary); publish the website (`site/`).
+- **Cube list** — keep the order stable while the live view changes.
 - **Toolbar** — group the unlabeled view buttons into a *View* menu.
-- **System view** — bundle network lines per process; fewer overlapping labels.
+- **System view** — fewer overlapping labels around busy processes.
 - **Tasks view** — performance as cubes instead of bars; tighter framing.
 
 ## Later

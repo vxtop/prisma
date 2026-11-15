@@ -127,7 +127,7 @@ function stepSystem(dt) {
   }
   sysCells.count = sn * 27; sysCells.instanceMatrix.needsUpdate = true; sysCells.instanceColor.needsUpdate = true;
   const P = egGeo.attributes.position.array, C = egGeo.attributes.color.array; let m = 0;
-  for (const [a, b, kind] of G.edges) { const A = G.nodes.get(a), B = G.nodes.get(b); if (!A || !B || m >= 4000) continue; const c = EC[kind] || EC.tree, hl = G.sel && (G.sel === A || G.sel === B) ? (kind === 'net' ? 4.5 : 2.4) : 1;
+  for (const [a, b, kind] of G.edges) { const A = G.nodes.get(a), B = G.nodes.get(b); if (!A || !B || m >= 4000) continue; const c = EC[kind] || EC.tree, on = (G.sel && (G.sel === A || G.sel === B)) || (G.hover && (G.hover === A || G.hover === B)), hl = on ? (kind === 'net' ? 4.5 : 2.4) : kind === 'net' ? .18 : 1; /* network lines stay faint until you point at one of their ends: no hairball */
     P.set([A.pos.x, A.pos.y, A.pos.z, B.pos.x, B.pos.y, B.pos.z], m * 6); C.set([c[0] * hl, c[1] * hl, c[2] * hl, c[0] * hl, c[1] * hl, c[2] * hl], m * 6); m++; }
   egGeo.setDrawRange(0, m * 2); egGeo.attributes.position.needsUpdate = true; egGeo.attributes.color.needsUpdate = true;
 }

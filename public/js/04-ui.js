@@ -19,7 +19,7 @@ function renderCubes() {
     el.innerHTML = roots.slice(0, rows).map(r => `<div class="ci ${G.sel && G.sel.id === String(r.pid) ? 'on' : ''}" data-pid="${esc(r.pid)}"><span><span style="color:${NODE_COL[r.kind] || '#888'}">●</span> ${esc(nodeName(r))}</span><span>${fmtB(r.ws)}</span></div>`).join(''); return; } $('#ncubes').textContent = o.length ? '· ' + o.length : '';
   let start = 0; const si = o.indexOf(S.sel); if (si >= rows) start = Math.min(si - (rows >> 1), o.length - rows);
   const now = Date.now();
-  el.innerHTML = o.slice(start, start + rows).map(c => `<div class="ci ${c === S.sel ? 'on' : ''}" data-k="${esc(c.key)}"><span style="padding-left:${c.depth * 11}px">${c.depth ? '' : '◆ '}${esc(c.name)}${now - c.aiHot < 20000 ? '<em>●</em>' : ''}</span><span>${c.data ? fmtB(c.data.totals.bytes) : '…'}</span></div>`).join('');
+  el.innerHTML = o.slice(start, start + rows).map(c => `<div class="ci ${c === S.sel ? 'on' : ''}" data-k="${esc(c.key)}"><span style="padding-left:${c.depth * 11}px">${c.depth ? '' : '◆ '}${esc(dispName(c))}${now - c.aiHot < 20000 ? '<em>●</em>' : ''}</span><span>${c.data ? fmtB(c.data.totals.bytes) : '…'}</span></div>`).join('');
 }
 $('#cubes').onclick = e => { const el = e.target.closest('.ci'); if (!el) return; if (el.dataset.tk) { const n = TR.nodes.get(el.dataset.tk); if (!n) return; if (e.target.closest('[data-tt]')) return trToggle(n); return trSelect(n); } if (el.dataset.z) { const z = TKS.zones.find(q => q.k === el.dataset.z); if (z) flyTo(z.c.clone(), 34); return; } if (el.dataset.pid) { const g = G.nodes.get(el.dataset.pid); if (g) { selectNode(g); flyTo(g.pos, 18); } return; } select(S.cubes.get(el.dataset.k), true); };
 function renderLayers() {

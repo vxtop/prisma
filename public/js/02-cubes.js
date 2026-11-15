@@ -17,7 +17,15 @@ function makeCube(info) {
   c.label = textSprite(768, 96); c.label.material.sizeAttenuation = false; c.label.material.depthTest = false; c.label.renderOrder = 6; c.label.center.set(.5, 0); scene.add(c.label); drawLabel(c);
   S.cubes.set(c.key, c); return c;
 }
-function drawLabel(c) { const pr = c.data && c.data.preset ? c.data.preset.types.filter(x => x[0] !== 'carpeta').map(x => x[1]).slice(0, 2).join(' · ') : ''; drawText(c.label, [[c.name, 44, '#f2f4f5', 35], [(c.kind ? KINDS[c.kind][1] + ' ' + KINDS[c.kind][2] + ' · ' : '') + (c.data ? `${fmtB(c.data.totals.bytes)} · ${fmtN(c.data.totals.files)} archivos${pr && !c.kind ? ' · ' + pr : ''}` : 'leyendo…'), 36, c.kind ? KINDS[c.kind][0] : 'rgba(190,200,206,.85)', 76]]); }
+// Display name: generic folder names get their parent (Local › AppData reads better than a bare Local);
+// Claude Code project folders (C--Users-name-Desktop-proj) show just the project.
+const GENERIC = new Set('local locallow roaming default bin src lib data build dist cache temp tmp logs log assets public config resources app scripts programs application packages user data microsoft google windows system32 storage files images'.split(' '));
+function dispName(c) {
+  const n = String(c.name || ''), cc = /^[A-Za-z]--Users-[^-]+-(?:Desktop-|Documents-)?(.+)$/.exec(n); if (cc) return cc[1];
+  if (!GENERIC.has(n.toLowerCase()) && n.length > 3) return n;
+  const parts = String(c.path || '').split(/[\\/]+/).filter(Boolean), par = parts[parts.length - 2]; return par && !/^[A-Za-z]:$/.test(par) ? par + ' › ' + n : n;
+}
+function drawLabel(c) { const pr = c.data && c.data.preset ? c.data.preset.types.filter(x => x[0] !== 'carpeta').map(x => x[1]).slice(0, 2).join(' · ') : ''; drawText(c.label, [[dispName(c), 44, '#f2f4f5', 35], [(c.kind ? KINDS[c.kind][1] + ' ' + KINDS[c.kind][2] + ' · ' : '') + (c.data ? `${fmtB(c.data.totals.bytes)} · ${fmtN(c.data.totals.files)} archivos${pr && !c.kind ? ' · ' + pr : ''}` : 'leyendo…'), 36, c.kind ? KINDS[c.kind][0] : 'rgba(190,200,206,.85)', 76]]); }
 const lastPos = new Map();
 function dropCube(c) {
   for (let i = 0; i < 27; i++) setM(CM, c.slot * 27 + i, 0, 0, 0, 0, 0, 0);

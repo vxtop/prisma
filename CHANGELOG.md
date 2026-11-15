@@ -14,6 +14,9 @@ First public-ready release, named **vxtop** (formerly SIMULA).
 - Apache-2.0 license, NOTICE, contributing and security guides, English and Spanish docs.
 
 ### Changed
+- Generic folder names show their parent (`AppData › Local`); Claude Code project folders show just the project.
+- System view: network lines stay faint until you point at a process or address.
+- About 350 lines of dead client code removed.
 - Starts without administrator rights.
 - Client split into ordered modules served as one bundle with a source map.
 - Live view shows only what is in use now (8 s), up to 24 activity groups.
