@@ -37,8 +37,8 @@ function tkBuild(d) {
       ['Conexiones', () => Math.min(1, (TKS.data ? TKS.data.net.est : 0) / 300), () => (TKS.data ? TKS.data.net.est : 0) + ' abiertas', '#4fb3ad']];
     const bw2 = W / bars.length; bars.forEach(([l, val, fmt, col], i) => items.push({ key: 'perf:' + l, kind: 'perf', zone: 'perf', label: l, val, fmt, x: z.c.x - W / 2 + bw2 * (i + .5), z: z.c.z + 3.8, w: bw2 * .5, d: bw2 * .5, col, pri: 8 })); z.n = d.procs + ' procesos'; }
   { const L = d.net.hosts, mx = Math.max(1, ...L.map(h => h.n)); grid('net', L, h => ({ key: 'net:' + h.host, kind: 'net', hst: h, col: '#4fb3ad', label: h.host, sub: h.n + (h.n > 1 ? ' conexiones' : ' conexión') + (h.procs.length ? ' · ' + h.procs.slice(0, 2).join(', ') : ''), h: .3 + 4 * Math.sqrt(h.n / mx), pri: h.n })); zone('net').n = d.net.est + ' conexiones · ' + d.net.listen + ' en escucha'; }
-  { const z = zone('files'), L = d.files, W = ZW - 2.4, Dd = ZD - 3.4, rows = 12, cw = W / 2, rh = Dd / rows; z.n = L.length;
-    void W; void Dd; void rows; void cw; void rh; grid('files', L, f => { const age = (Date.now() - f.t) / 1000; return { key: 'file:' + f.path, kind: 'file', f, col: f.src === 'ia' ? '#e8a33d' : '#c9a26b', label: base(f.path), sub: ago(f.t) + ' · ' + f.src + ' · ' + base(f.path.replace(/[\\/][^\\/]*$/, '')), h: .06 + .5 * Math.exp(-age / 90), pri: 1e9 - age }; }, .7); for (const it of items) if (it.kind === 'file') it.d = it.w * .62; }
+  { const z = zone('files'), L = d.files; z.n = L.length;
+    grid('files', L, f => { const age = (Date.now() - f.t) / 1000; return { key: 'file:' + f.path, kind: 'file', f, col: f.src === 'ia' ? '#e8a33d' : '#c9a26b', label: base(f.path), sub: ago(f.t) + ' · ' + f.src + ' · ' + base(f.path.replace(/[\\/][^\\/]*$/, '')), h: .06 + .5 * Math.exp(-age / 90), pri: 1e9 - age }; }, .7); for (const it of items) if (it.kind === 'file') it.d = it.w * .62; }
   { const L = [...d.services].sort((a, b) => (b.s === 'Running') - (a.s === 'Running') || String(a.d || a.n).localeCompare(String(b.d || b.n))), on = L.filter(v => v.s === 'Running').length;
     grid('svc', L, v => { const run = v.s === 'Running', auto = /auto/i.test(v.m || ''); return { key: 'svc:' + v.n, kind: 'svc', v, col: run ? '#4fb3ad' : auto ? '#8a6d3b' : '#3a4146', label: v.d || v.n, sub: (run ? 'en ejecución' : 'detenido') + (v.m ? ' · inicio ' + String(v.m).toLowerCase() : '') + (v.pid ? ' · PID ' + v.pid : ''), h: run ? .9 : .18, pri: 0 }; }, .82);
     zone('svc').n = L.length ? on + ' de ' + L.length + ' en ejecución' : 'sin datos'; }
@@ -128,7 +128,6 @@ $('#dock').addEventListener('toggle', e => { const k = e.target.dataset && e.tar
 function renderDock() {
   $('#dock').style.display = 'none'; const el = $('#dockin'), c = S.sel; // the card lives in the right panel's card tab, not over the scene
   if (!el || !c || !c.data || S.mode !== 'cube' || S.tab !== 'ficha') return;
-  if (false) { const [cx] = scr(c.pos), right = cx < (L + R) / 2; DOCK.side = right ? 'right' : 'left'; void right; } // disabled: would place the card opposite the cube
   if (!c.metaBusy && (!c.meta || Date.now() - c.metaT > 10000)) { c.metaBusy = true; apiT('/api/meta?path=' + encodeURIComponent(c.path)).then(v => { c.meta = v; c.metaT = Date.now(); }).catch(() => { c.metaT = Date.now(); }).finally(() => { c.metaBusy = false; }); }
   const mt = c.meta, d = c.data, g = d.git, a = c.agent || d.agents, lv = c.act, ev = c.events.slice(0, 5), mx = Math.max(1, ...d.exts.map(x => x.bytes)), lk = S.procs && S.procs.linked, dp = c.deps && !c.deps.pending ? c.deps : null;
   const row = (l, r, bar, col) => `<div class="dr"><span>${esc(l)}</span><b>${esc(r ?? '')}</b>${bar != null ? `<i style="--w:${Math.min(100, bar * 100).toFixed(1)}%"></i>` : ''}</div>`;

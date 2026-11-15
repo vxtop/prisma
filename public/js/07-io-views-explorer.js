@@ -73,7 +73,7 @@ function entIcon(en) {
 }
 function exRows() { const d = EX.data; return d ? d.entries.filter(x => EX.hidden || !x.hidden) : (EX.roots || []); }
 function renderExplorer() {
-  const el = $('#explorer'); if (el.style.display === 'none') return; const d = EX.data, rows = exRows();
+  const el = $('#explorer'); if (el.style.display === 'none') return; const d = EX.data;
   const crumbs = d ? d.path.split(/[\\/]/).filter(Boolean) : [];
   let acc = ''; const crumbHtml = d ? crumbs.map((s, i) => { acc = i === 0 && /:$/.test(s) ? s + '\\' : acc + (acc.endsWith('\\') || acc.endsWith('/') ? '' : SEP(d.path)) + s; if (i === 0 && !/:$/.test(s)) acc = '/' + s; return `<b data-p="${esc(acc)}">${esc(s)}</b>`; }).join('<i>›</i>') : '<b>Equipo</b>';
   el.innerHTML = `<div id="exbar"><button data-x="up" class="ico" data-tip="Subir un nivel"><svg class="i"><use href="#i-up"/></svg></button><button data-x="home" class="ico" data-tip="Unidades y carpetas del usuario"><svg class="i"><use href="#i-drives"/></svg></button><div id="crumbs">${crumbHtml}</div></div>

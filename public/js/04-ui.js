@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 virtuanista
 //
-// User interface: top bar, cube list, layers, HUD, info panel and tabs, channel drawing,
+// User interface: top bar, cube list, layers, HUD, info panel and tabs,
 // search and the layout/slice/follow toggles.
 // === Interface ===
 function renderTop() {
@@ -21,7 +21,7 @@ function renderCubes() {
   const now = Date.now();
   el.innerHTML = o.slice(start, start + rows).map(c => `<div class="ci ${c === S.sel ? 'on' : ''}" data-k="${esc(c.key)}"><span style="padding-left:${c.depth * 11}px">${c.depth ? '' : '◆ '}${esc(c.name)}${now - c.aiHot < 20000 ? '<em>●</em>' : ''}</span><span>${c.data ? fmtB(c.data.totals.bytes) : '…'}</span></div>`).join('');
 }
-$('#cubes').onclick = e => { const el = e.target.closest('.ci'); if (!el) return; if (el.dataset.tk) { const n = TR.nodes.get(el.dataset.tk); if (!n) return; if (e.target.closest('[data-tt]')) return trToggle(n); return trSelect(n, true); } if (el.dataset.z) { const z = TKS.zones.find(q => q.k === el.dataset.z); if (z) flyTo(z.c.clone(), 34); return; } if (el.dataset.pid) { const g = G.nodes.get(el.dataset.pid); if (g) { selectNode(g); flyTo(g.pos, 18); } return; } select(S.cubes.get(el.dataset.k), true); };
+$('#cubes').onclick = e => { const el = e.target.closest('.ci'); if (!el) return; if (el.dataset.tk) { const n = TR.nodes.get(el.dataset.tk); if (!n) return; if (e.target.closest('[data-tt]')) return trToggle(n); return trSelect(n); } if (el.dataset.z) { const z = TKS.zones.find(q => q.k === el.dataset.z); if (z) flyTo(z.c.clone(), 34); return; } if (el.dataset.pid) { const g = G.nodes.get(el.dataset.pid); if (g) { selectNode(g); flyTo(g.pos, 18); } return; } select(S.cubes.get(el.dataset.k), true); };
 function renderLayers() {
   const s = S.sys, c = S.sel, p = S.procs; if (!s) return;
   const avg = S.cpuHist[S.cpuHist.length - 1] || 0, mu = (s.mem.total - s.mem.free) / s.mem.total, g = s.gpu, dk = (c && c.data && c.data.disk) || s.disk; // no cube: system disk
@@ -52,30 +52,18 @@ function renderPanel() {
   if (VIEW.cur === 'tareas') { if (S.mode === 'task' && TKS.sel) return renderTaskPanel(); if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; }
   if (VIEW.cur === 'sistema' && !(S.mode === 'proc' && G.sel)) { if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; }
   if (S.mode === 'obj' && OB.sel) return renderObjPanel(); if (S.mode === 'proc' && G.sel) return renderProcPanel(); if (S.mode === 'lp' && S.lpSel && VIEW.cur === 'espacio') return renderLpPanel(); S.mode = 'cube';
-  const c = S.sel; if (!c) { if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; } if (S.multi.size < 2 && S.tab === 'cmp') S.tab = 'ficha'; if (S.tab === 'canales') S.tab = 'ficha'; $('#tabs').innerHTML = (S.multi.size > 1 ? [['cmp', 'Comparar'], ...TABS.cube] : TABS.cube).map(([k, l]) => '<button data-t="' + k + '">' + l + '</button>').join(''); $('#r-exp').style.display = ''; const was = $('#right').style.display; $('#right').style.display = 'flex'; if (was !== 'flex') applyView();
+  const c = S.sel; if (!c) { if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; } if (S.multi.size < 2 && S.tab === 'cmp') S.tab = 'ficha'; $('#tabs').innerHTML = (S.multi.size > 1 ? [['cmp', 'Comparar'], ...TABS.cube] : TABS.cube).map(([k, l]) => '<button data-t="' + k + '">' + l + '</button>').join(''); $('#r-exp').style.display = ''; const was = $('#right').style.display; $('#right').style.display = 'flex'; if (was !== 'flex') applyView();
   $('#rn').textContent = c.name; $('#rp').innerHTML = '<span style="direction:ltr;unicode-bidi:isolate">' + esc(c.path) + '</span>';
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === S.tab));
-  renderTab(true);
+  renderTab();
 }
 let builtFor = '';
-function renderTab(force) {
+function renderTab() {
   if (S.mode !== 'cube') return; const c = S.sel, el = $('#tab'); if (!c) return; const d = c.data;
   if (!d) { el.innerHTML = '<div class="note">Leyendo directorio…</div>'; builtFor = ''; return; }
   const sig = S.tab + '|' + c.key;
   if (S.tab === 'cmp') { builtFor = ''; return renderCompare(el); }
   if (S.tab === 'ficha') { if (builtFor !== sig || !$('#dockin')) { builtFor = sig; DOCK.html = ''; el.innerHTML = '<div class="dockin" id="dockin"></div>'; } return renderDock(); }
-  if (S.tab === 'canales') {
-    if (force || builtFor !== sig) { builtFor = sig; const ch = channels(c);
-      el.innerHTML = `<div class="mxg">${ch.map((x, i) => `<div class="mxc"><div class="mxt"><b style="color:${x.color}">${x.name}</b><span id="mxn${i}"></span></div><canvas id="mx${i}" width="300" height="300"></canvas></div>`).join('')}</div>
-        <div id="why"></div><div id="mxs" class="note">Pasa el cursor por una matriz para leer el par de archivos.</div>`;
-      ch.forEach((_, i) => { const cv = $('#mx' + i);
-        cv.onmousemove = e => { const cc = channels(S.sel)[i], n = cc.labels.length, r = cv.getBoundingClientRect(); if (!n) { $('#mxs').textContent = cc.hint; return; }
-          const off = cc.focus ? .07 : 0, yy = ((e.clientY - r.top) / r.height - off) / (1 - off), a = Math.max(0, Math.min(n - 1, yy * n | 0)), b = Math.min(n - 1, (e.clientX - r.left) / r.width * n | 0);
-          $('#mxs').innerHTML = `<span style="color:${cc.color}">${esc(base(cc.labels[a]))} ${a === b ? '' : '→ ' + esc(base(cc.labels[b]))}</span> · ${cc.val(a, b).toFixed(2)}<br><span class="note">${esc(cc.hint)}</span>`; };
-        cv.onmouseleave = () => { $('#mxs').textContent = 'Pasa el cursor por una matriz para leer el par de archivos.'; }; });
-    }
-    drawChannels(); return;
-  }
   builtFor = sig;
   if (S.tab === 'props') {
     const g = d.git, a = c.agent || d.agents, mx = Math.max(1, ...d.exts.map(x => x.bytes));
@@ -121,13 +109,7 @@ function renderTab(force) {
       <h2 class="sub">Sistema · mayor uso de CPU</h2><div class="list">${p ? p.top.map(row).join('') : '<div class="note">Leyendo procesos…</div>'}</div>`;
   }
 }
-let whyTxt = null;
-function drawChannels() {
-  const c = S.sel; if (S.mode !== 'cube' || !c || S.tab !== 'canales' || !$('#mx0')) return; const ch = channels(c);
-  ch.forEach((x, i) => { const cv = $('#mx' + i); if (!cv) return; if (x.focus) drawFocus(cv, c.att); else drawMx(cv, x); const nn = $('#mxn' + i); const t = x.labels.length ? x.labels.length + '×' + x.labels.length : ''; if (nn.textContent !== t) nn.textContent = t; });
-  const w = explain(c) || '<span class="note">Sin datos de foco todavía.</span>', wy = $('#why'); if (wy && wy.dataset.v !== w) { wy.dataset.v = w; wy.innerHTML = w; }
-}
-$('#tab').onclick = e => { const i = e.target.closest('.cgrid i'); if (i && S.sel) { const n = +i.dataset.i; S.sel.cell = S.sel.cell === n ? null : n; renderTab(true); } };
+$('#tab').onclick = e => { const i = e.target.closest('.cgrid i'); if (i && S.sel) { const n = +i.dataset.i; S.sel.cell = S.sel.cell === n ? null : n; renderTab(); } };
 $('#tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (S.mode === 'cube') S.tab = b.dataset.t; else S.tabs[S.mode] = b.dataset.t; renderPanel(); };
 const openPath = async expand => { const inp = $('#path'), p = inp.value.trim(); if (!p) return inp.focus();
   const many = p.split(/\s*[;\n]\s*/).filter(Boolean); // several paths separated by ";": all open and are placed in turn
@@ -152,7 +134,7 @@ $('#r-exp').onclick = () => S.sel && post('/api/open', { path: S.sel.path, expan
 $('#r-close').onclick = () => { if (S.mode === 'obj' && OB.sel) return closeObj(OB.sel); if (S.mode === 'proc') { G.sel = null; S.mode = 'cube'; return renderPanel(); } S.sel && post('/api/close', { path: S.sel.path }).catch(() => {}); };
 function setSlice(axis) {
   const s = S.slice; S.slice = axis == null ? null : !s || s.axis !== axis ? { axis, layer: 0 } : s.layer < 2 ? { axis, layer: s.layer + 1 } : null;
-  S.geoDirty = true; if (S.sel) S.sel.cell = null; renderTop(); if (S.slice) { S.tab = 'celda'; renderPanel(); } else renderTab(true);
+  S.geoDirty = true; if (S.sel) S.sel.cell = null; renderTop(); if (S.slice) { S.tab = 'celda'; renderPanel(); } else renderTab();
 }
 $('#sl').onclick = e => { const b = e.target.closest('button'); if (b) setSlice(+b.dataset.a); };
 const toggleEx = () => { S.exploded = !S.exploded; renderTop(); }; $('#b-ex').onclick = toggleEx;

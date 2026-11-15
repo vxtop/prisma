@@ -25,7 +25,6 @@ const ago = t => { if (!t) return '—'; const s = (Date.now() - t) / 1000; if (
 const pct = v => v == null || !isFinite(v) ? '—' : Math.round(v * 100) + ' %';
 const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; };
 const base = p => String(p).split(/[\\/]/).filter(Boolean).pop() || p;
-const dirOf = r => String(r).replace(/[\\/]?[^\\/]*$/, '');
 let CI = true; // Windows and macOS paths are case-insensitive, Linux is not (updated once the platform is known)
 const K = p => CI ? String(p).toLowerCase() : String(p);
 const trimSep = p => String(p).replace(/[\\/]+$/, '');

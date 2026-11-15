@@ -6,7 +6,6 @@
 const H2 = $('#hud2'), h2 = H2.getContext('2d');
 function sizeHud() { const r = Math.min(2, devicePixelRatio || 1); H2.width = innerWidth * r; H2.height = innerHeight * r; h2.setTransform(r, 0, 0, r, 0, 0); }
 addEventListener('resize', sizeHud); sizeHud();
-const SRC = { disco: ['disco', '#4fb3ad'], ia: ['IA', '#e8a33d'], programa: ['programa', '#6f8fb3'], descarga: ['descarga', '#c9a26b'], reciente: ['reciente', '#9a8f7a'] };
 const scr = v => { v1.copy(v).project(camera); return [(v1.x + 1) / 2 * innerWidth, (1 - v1.y) / 2 * innerHeight, v1.z < 1]; };
 function hudBox(x, y, w, title, rows, col = '#4fb3ad') { // data box with a header and rows
   const hgt = 22 + rows.length * 15 + 6; h2.fillStyle = 'rgba(5,8,10,.78)'; h2.fillRect(x, y, w, hgt); h2.strokeStyle = 'rgba(255,255,255,.14)'; h2.lineWidth = 1; h2.strokeRect(x + .5, y + .5, w - 1, hgt - 1);
@@ -45,22 +44,6 @@ function drawHud() {
     if (!c.data) chips.unshift(['leyendo…', '#8a9399']);
     let w = chips.reduce((s, [t]) => s + h2.measureText(t).width + 16, 0), xx = x - w / 2; const yy = y + 6;
     for (const [t, col] of chips) { const tw = h2.measureText(t).width + 12; h2.globalAlpha = c.act && c.act.fading ? .45 : 1; h2.strokeStyle = col; h2.strokeRect(xx + .5, yy + .5, tw, 15); h2.fillStyle = col; h2.fillText(t, xx + 6, yy + 11); xx += tw + 4; } h2.globalAlpha = 1; }
-  // trail: recently used items
-  if (ghLines.visible) { h2.textAlign = 'center'; for (const g of GH.values()) { const [x, y, ok] = scr(v1.copy(g.pos).setY(g.pos.y + 1.2)); if (!ok || x < L || x > R || y < T || y > B) continue;
-    h2.font = '500 11px "Segoe UI",sans-serif'; h2.fillStyle = 'rgba(160,176,182,.7)'; h2.fillText(g.name.slice(0, 22), x, y - 4); h2.font = '10px "Segoe UI",sans-serif'; h2.fillStyle = 'rgba(140,150,156,.55)'; h2.fillText('usado hace ' + ago(g.last || g.t), x, y + 9); } h2.textAlign = 'left'; }
-  // time rings: name drawn at the point nearest the camera
-  if (bandRings.visible) { const az = Math.atan2(camera.position.z, camera.position.x); h2.font = '600 10px "Segoe UI",sans-serif'; h2.textAlign = 'center';
-    if (false) BAND_R.forEach((Rb, i) => { const [x, y, ok] = scr(v1.set(Math.cos(az + .18) * Rb, FLOOR, Math.sin(az + .18) * Rb)); if (!ok || x < L || x > R || y < T || y > B) return; h2.fillStyle = 'rgba(120,150,156,.75)'; h2.fillText(BAND_TXT[i], x, y + 14); }); h2.textAlign = 'left'; }
-  // processes: names of the busiest; full card only for the hovered or selected one
-  if (false && S.space === 'vivo' && lpCells.visible) { const near = camera.position.distanceTo(controls.target) < 26, top = new Set(near ? [...LP.values()].sort((a, b) => b.p.cpu - a.p.cpu).slice(0, 6) : []); h2.textAlign = 'center';
-    for (const o of LP.values()) { const full = o === S.lpHover || o === S.lpSel; if (!full && !top.has(o)) continue; const [x, y, ok] = scr(v1.set(o.base.x, FLOOR, o.base.z)), p = o.p; if (!ok || x < L || x > R || y < T || y > B - 40) continue;
-      const nm = (p.win || p.name.replace(/\.exe$/i, '')).slice(0, 18) + (p.n > 1 ? ' ×' + p.n : '');
-      if (!full) { h2.font = '500 10px "Segoe UI",sans-serif'; h2.fillStyle = o.kind === 'claude' ? 'rgba(232,163,61,.85)' : 'rgba(200,210,214,.7)'; h2.fillText(nm, x, y + 14); continue; }
-      const w = 132, yy = y + 8; h2.fillStyle = 'rgba(8,11,14,.94)'; h2.fillRect(x - w / 2, yy, w, 38); h2.strokeStyle = 'rgba(255,255,255,.35)'; h2.strokeRect(x - w / 2 + .5, yy + .5, w - 1, 37);
-      h2.font = '600 11px "Segoe UI",sans-serif'; h2.fillStyle = o.kind === 'claude' ? '#e8a33d' : '#eef1f3'; h2.fillText(nm, x, yy + 14); h2.textAlign = 'left';
-      h2.fillStyle = 'rgba(255,255,255,.08)'; h2.fillRect(x - w / 2 + 8, yy + 22, w - 16, 3); h2.fillRect(x - w / 2 + 8, yy + 30, w - 16, 3);
-      h2.fillStyle = '#e8a33d'; h2.fillRect(x - w / 2 + 8, yy + 22, (w - 16) * Math.min(1, p.cpu / 100), 3); h2.fillStyle = '#4fb3ad'; h2.fillRect(x - w / 2 + 8, yy + 30, (w - 16) * Math.min(1, p.ws / 3e9), 3); h2.textAlign = 'center'; }
-    h2.textAlign = 'left'; }
   // selected cube: four data boxes joined by guide lines
   const c = S.sel; if (!c || !c.data || c.vis === false || S.mode !== 'cube') return;
   const [cx, cy, ok] = scr(c.pos); if (!ok) return; const [ex] = scr(v3.copy(c.pos).addScaledVector(camR.setFromMatrixColumn(camera.matrixWorld, 0), 1.6 * c.s * (1 + .9 * c.ex))); const r = Math.max(40, Math.abs(ex - cx));

@@ -4,9 +4,9 @@
 // Render loop: per-frame animation of cubes, windows, particles, selection and labels,
 // plus adaptive resolution.
 // === Render Loop ===
-const clock = new THREE.Clock(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), camR = new THREE.Vector3(), camU = new THREE.Vector3();
+const clock = new THREE.Clock(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), camR = new THREE.Vector3();
 const selTrack = { c: null, p: new THREE.Vector3() }; let peekAcc = 0;
-let ambAcc = 0, attAcc = 0, uiAcc = 0, fpsAcc = 0, fpsN = 0, slowT = 0, fastT = 0;
+let uiAcc = 0, fpsAcc = 0, fpsN = 0, slowT = 0, fastT = 0;
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime, now = Date.now(), kf = 1 - Math.pow(.0006, dt);
@@ -60,44 +60,12 @@ function tick() {
   linkGeo.setDrawRange(0, ln * 2); linkGeo.attributes.position.needsUpdate = true;
   if (gone.length) { gone.forEach(c => { if (S.cubes.get(c.key) === c) dropCube(c); }); layout(); renderCubes(); $('#empty').style.display = S.cubes.size || VIEW.cur !== 'espacio' ? 'none' : 'block'; } // once fully empty, the welcome prompt appears
   if (VIEW.cur === 'espacio') spaceBodies(dt);
-  // ambient flow: child -> parent, proportional to its activity
-  ambAcc += dt; if (false && ambAcc > .12) { ambAcc = 0; for (const c of S.order) { const par = c.parent && S.cubes.get(K(c.parent)); if (!par || !c.data) continue;
-    const act = .05 + Math.min(.6, c.evCount * .02) + (now - c.aiHot < 30000 ? .5 : 0); if (Math.random() < act) emit(c.pos, par.pos, now - c.aiHot < 30000 ? AMB_AI : AMB, 1, 1.8, .2, .2); } }
-  // selection: corner brackets, faces and floating matrix
-  const sel = S.sel, bp = brGeo.attributes.position.array;
-  if (sel) { let o = 0; const list = [sel, ...[...S.multi].map(k => S.cubes.get(k)).filter(c => c && c !== sel)].slice(0, 9);
-    for (const cb of list) { const h = 1.56 * cb.s * (1 + .9 * cb.ex), L = h * .28;
-    for (let sx = -1; sx <= 1; sx += 2) for (let sy = -1; sy <= 1; sy += 2) for (let sz = -1; sz <= 1; sz += 2) { const x = cb.pos.x + sx * h, y = cb.pos.y + sy * h, z = cb.pos.z + sz * h;
-      bp.set([x, y, z, x - sx * L, y, z, x, y, z, x, y - sy * L, z, x, y, z, x, y, z - sz * L], o); o += 18; } }
-    brGeo.setDrawRange(0, o / 3); brGeo.attributes.position.needsUpdate = true; brackets.visible = false;
-    selRing.visible = stem.visible = false; selRing.position.set(sel.pos.x, FLOOR + .01, sel.pos.z);
-    stemGeo.attributes.position.array.set([sel.pos.x, sel.pos.y - 1.6 * sel.s * (1 + .9 * sel.ex), sel.pos.z, sel.pos.x, FLOOR + .01, sel.pos.z]); stemGeo.attributes.position.needsUpdate = true; stem.computeLineDistances(); selRing.scale.setScalar(2.4 * sel.s * (1 + .9 * sel.ex) * (1 + Math.sin(t * 2.4) * .015));
-    faceGroup.visible = false; // each cell's figures are drawn on the data layer, without covering the cube
-    attAcc += dt; if (attAcc > .066) { stepAttention(sel, attAcc); attAcc = 0; drawFocus(attCv, sel.att, true); attTex.needsUpdate = true; drawChannels(); }
-    const att = sel.att, show = false && att && att.n > 1 && S.mode === 'cube'; attPlane.visible = !!show;
-    if (show) { camR.setFromMatrixColumn(camera.matrixWorld, 0); camU.setFromMatrixColumn(camera.matrixWorld, 1); const size = 2.1 * Math.max(sel.s, .6);
-      const side = v1.copy(sel.pos).project(camera).x > 0 ? -1 : 1; attPlane.position.copy(sel.pos).addScaledVector(camR, side * (1.7 * sel.s * (1 + .9 * sel.ex) + size * .55)).addScaledVector(camU, 1.7 * sel.s * (1 + .9 * sel.ex) + size * .62); attPlane.quaternion.copy(camera.quaternion); attPlane.scale.set(size, size, 1);
-      // threads: from the most-focused rows to their actual windows in the cube
-      const ap = aGeo.attributes.position.array, ac = aGeo.attributes.color.array, n = att.n, idx = [...Array(n).keys()].sort((a, b) => att.G[b] - att.G[a]).slice(0, 6); let m = 0;
-      for (const i of idx) { if (att.G[i] < .05) continue; const k = sel.slotOf.get(K(att.lab[i])); if (k == null) continue; const top = .07, y = .5 - top - (i + .5) / n * (1 - top);
-        v1.copy(attPlane.position).addScaledVector(camR, -side * size / 2).addScaledVector(camU, y * size); voxWorld(sel, k, v2);
-        ap.set([v1.x, v1.y, v1.z, v2.x, v2.y, v2.z], m * 6); const a = att.G[i] * .9; ac.set([.91 * a, .64 * a, .24 * a, .91 * a * .5, .64 * a * .5, .24 * a * .5], m * 6); m++; }
-      aGeo.setDrawRange(0, m * 2); aGeo.attributes.position.needsUpdate = true; aGeo.attributes.color.needsUpdate = true; attnLines.visible = m > 0; } else attnLines.visible = false;
-  } else { selRing.visible = stem.visible = false; brackets.visible = false; faceGroup.visible = false; attPlane.visible = false; attnLines.visible = false; }
-  stepProbes(dt, t, now); stepObjects(dt); stepSystem(dt, t); stepTasks(dt); stepTree(dt); stepGhosts(dt);
-  bandRings.visible = false && S.space === 'vivo' && VIEW.cur === 'espacio' && !VW.o && !S.enter && (S.layout === 'cluster' || S.layout === 'orbit');
+  stepProbes(dt, t, now); stepObjects(dt); stepSystem(dt); stepTasks(dt); stepTree(dt);
   peekAcc += dt; if (peekAcc > .25 && S.space === 'vivo' && VIEW.cur === 'espacio' && !S.enter) { peekAcc = 0; // proximity-based expansion, with hysteresis
     let best = null; for (const c of S.cores || []) if (c.vis !== false && (c.rp || 0) > 200 && (!best || c.rp > best.rp)) best = c;
     const cur = S.peek && S.cubes.get(S.peek), keep = cur && (cur.rp || 0) > 150 ? cur : null, nx = keep ? keep.key : best ? best.key : null;
     if (nx !== S.peek) { S.peek = nx; layout(); renderCubes(); } } stepParticles(t); if (VIEW.cur === 'espacio') declutterCubes(dt); peekTick();
-  { // shadows under visible cubes and brackets on the hovered cube
-    const A = shadowIM.instanceMatrix.array; let si = 0; for (const c of S.order) { if (si >= SHMAX) break; const vs = c.vis === false ? 0 : c.s * 3.6 * (1 + .9 * c.ex) * Math.max(.35, 1 - (c.pos.y - FLOOR) / 30); setM(A, si++, c.pos.x, FLOOR + .005, c.pos.z, vs, 1, vs); }
-    if (lpCells.visible) for (const o of LP.values()) { if (si >= SHMAX) break; setM(A, si++, o.base.x, FLOOR + .005, o.base.z, o.h * 1.6, 1, o.h * 1.6); }
-    for (let i = si; i < SHMAX; i++) setM(A, i, 0, 0, 0, 0, 0, 0); shadowIM.instanceMatrix.needsUpdate = true; shadowIM.visible = false;
-    const HA = heatIM.instanceMatrix.array, HC = heatIM.instanceColor.array; let hi = 0;
-    if (S.space === 'vivo' && VIEW.cur === 'espacio') for (const c of S.order) { if (hi >= 64 || c.vis === false || !c.act) continue; const h = vivoHeat(c); if (h < .03) continue; const ai = c.act.src && c.act.src.ia && Date.now() - c.act.src.ia < 60000, col = ai ? HEAT_AI : HEAT_FS, f = h * (.14 + .03 * Math.sin(t * 2 + c.seq)), sz = c.s * (3.6 + 1.6 * h);
-      setM(HA, hi, c.pos.x, FLOOR + .012, c.pos.z, sz, 1, sz); HC[hi * 3] = col.r * f; HC[hi * 3 + 1] = col.g * f; HC[hi * 3 + 2] = col.b * f; hi++; }
-    hi = 0; heatIM.count = hi; heatIM.instanceMatrix.needsUpdate = true; heatIM.instanceColor.needsUpdate = true;
+  { // brackets on the hovered cube
     const hc = S.hover && S.hover.c !== S.sel && S.hover.c.vis !== false ? S.hover.c : null; hovBr.visible = !!hc && !VW.o;
     if (hc) { const hp = hovGeo.attributes.position.array, h = 1.6 * hc.s * (1 + .9 * hc.ex), L = h * .22; let o = 0;
       for (let sx = -1; sx <= 1; sx += 2) for (let sy = -1; sy <= 1; sy += 2) for (let sz = -1; sz <= 1; sz += 2) { const x = hc.pos.x + sx * h, y = hc.pos.y + sy * h, z = hc.pos.z + sz * h; hp.set([x, y, z, x - sx * L, y, z, x, y, z, x, y - sy * L, z, x, y, z, x, y, z - sz * L], o); o += 18; }
@@ -113,5 +81,5 @@ function tick() {
     if (slowT >= 2 && DPR > .6) { DPR = Math.max(.6, DPR - .2); resize(); slowT = 0; } else if (fastT >= 5 && DPR < Math.min(devicePixelRatio, SET.dpr)) { DPR = Math.min(Math.min(devicePixelRatio, SET.dpr), DPR + .1); resize(); fastT = 0; } }
 }
 const offT = new THREE.Vector3();
-const AMB = new THREE.Color(.1, .3, .29), AMB_AI = new THREE.Color(.45, .3, .1);
+const AMB_AI = new THREE.Color(.45, .3, .1);
 

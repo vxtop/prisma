@@ -8,7 +8,7 @@
 // Program cube: its live window and what it touched last. Images/videos are shown; text shows its first lines. Hides when the cursor leaves.
 const PK = { key: null, cand: null, t0: 0, el: null, items: [], shotT: 0, anchor: null, gen: 0 };
 const pkEl = document.createElement('div'); pkEl.id = 'peekbox'; document.body.appendChild(pkEl);
-const PK_IMG = /\.(png|jpe?g|gif|webp|bmp|avif|ico|svg)$/i, PK_VID = /\.(mp4|webm|mov|m4v|ogv|mkv)$/i, PK_AUD = /\.(mp3|wav|ogg|flac|m4a|aac|opus|weba)$/i, PK_TXT = /\.(txt|md|log|json|js|mjs|ts|tsx|jsx|css|html?|py|ps1|bat|cmd|ini|ya?ml|toml|csv|xml|c|cpp|h|cs|java|go|rs|sh|sql)$/i;
+const PK_IMG = /\.(png|jpe?g|gif|webp|bmp|avif|ico|svg)$/i, PK_VID = /\.(mp4|webm|mov|m4v|ogv|mkv)$/i, PK_TXT = /\.(txt|md|log|json|js|mjs|ts|tsx|jsx|css|html?|py|ps1|bat|cmd|ini|ya?ml|toml|csv|xml|c|cpp|h|cs|java|go|rs|sh|sql)$/i;
 const pkUrl = (ep, p) => '/api/' + ep + '?t=' + TK() + '&path=' + encodeURIComponent(p);
 function pkTarget() {
   if (VIEW.cur !== 'espacio' || VW.o || S.ptr || ctxEl.style.display === 'block') return null;

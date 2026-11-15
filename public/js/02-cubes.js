@@ -2,15 +2,15 @@
 // Copyright 2026 virtuanista
 //
 // Cube layout: file-to-window assignment, the space layouts (cluster/stack/network/orbit),
-// trail silhouettes, collision spacing, heat halos and the six info faces.
+// trail memory, collision spacing and live-activity heat.
 // === Cubes ===
 let CUBESEQ = 0;
 function makeCube(info) {
   const slot = freeSlots.pop(); if (slot == null) return null;
   const c = { seq: ++CUBESEQ, path: info.path, key: K(info.path), name: info.name, parent: info.parent, by: info.by, slot, data: null, pos: new THREE.Vector3(), s: .01, ex: 0, home: new THREE.Vector3(), rel: null, manual: null, tScale: 1, depth: 0,
-    last: [NaN, 0, 0, 0, 0], cell: null, events: [], evCount: 0, lastEv: null, hot: new Map(), live: { files: [], w: new Map(), at: new Map() }, agent: null, deps: null, linkK: null, lastScan: 0,
+    last: [NaN, 0, 0, 0, 0], cell: null, events: [], evCount: 0, lastEv: null, live: { files: [], at: new Map() }, agent: null, deps: null, lastScan: 0,
     heat: new Float32Array(27), pulse: new Float32Array(27), nv: 0, vcell: new Uint8Array(VPC), vslot: new Float32Array(VPC * 6), vbase: new Float32Array(VPC * 3), vheat: new Float32Array(VPC), vfl: new Float32Array(VPC * 3),
-    slotOf: new Map(), relOf: [], ai: new Map(), cellDirty: true, colDirty: true, aiHot: 0, att: null, off: new THREE.Vector3() };
+    slotOf: new Map(), relOf: [], ai: new Map(), cellDirty: true, colDirty: true, aiHot: 0, off: new THREE.Vector3() };
   const par = info.parent && S.cubes.get(K(info.parent)); if (par) c.pos.copy(par.pos);
   for (let i = 0; i < 27; i++) { const o = (slot * 27 + i) * 3, t = TYPE_COL[i % 3]; CC[o] = .05 + t.r * .03; CC[o+1] = .055 + t.g * .03; CC[o+2] = .062 + t.b * .03; }
   cellsIM.instanceColor.needsUpdate = true;
@@ -99,14 +99,14 @@ function layoutCore(resetManual) {
   else { let x = 0; cores.forEach((core, i) => { if (i) x += core._ext; core.home.set(x, 0, 0); x += core._ext + 1.5; }); }
   if (!river && !(cores.length > 4 && mode !== 'stack')) { const mid = cores.length ? (cores[0].home.x + cores[cores.length - 1].home.x) / 2 : 0; cores.forEach(c => c.home.x -= mid); }
   for (const [core, { towers, rings }] of desc) { let t = 0; // each tower: the subfolder at the base (largest), its contents stacked on top
-    rings.forEach(([R, m], ri) => { for (let j = 0; j < m; j++, t++) { const a = j / m * Math.PI * 2 + ri * .35, x = core.home.x + Math.cos(a) * R, z = core.home.z + Math.sin(a) * R; let y = FLOOR;
-      const T = towers[t], gs = Math.ceil(Math.sqrt(Math.ceil(T.length / 8))), ys = []; void y; // columns of at most 8, heaviest at the bottom
+    rings.forEach(([R, m], ri) => { for (let j = 0; j < m; j++, t++) { const a = j / m * Math.PI * 2 + ri * .35, x = core.home.x + Math.cos(a) * R, z = core.home.z + Math.sin(a) * R;
+      const T = towers[t], gs = Math.ceil(Math.sqrt(Math.ceil(T.length / 8))), ys = []; // columns of at most 8, heaviest at the bottom
       T.forEach((c, i) => { const col = i / 8 | 0, sc = i ? .34 : .46, cx = x + ((col % gs) - (gs - 1) / 2) * 1.3, cz = z + ((col / gs | 0) - (gs - 1) / 2) * 1.3; let yy = ys[col] ?? FLOOR;
         c.rel = null; c.tScale = sc; yy += 1.46 * sc + .1; c.home.set(cx, yy, cz); ys[col] = yy + 1.46 * sc; }); } }); }
 }
 
 const lastAct = c => (c.act && c.act.last) || (c.act && c.act.since) || 0;
-const NSLOT = 16, BAND_R = [12, 17.5, 23, 28.5], BAND_TXT = ['AHORA', 'HACE SEGUNDOS', 'SE APAGA', ''], lastAng = new Map();
+const NSLOT = 16, BAND_R = [12, 17.5, 23], lastAng = new Map();
 function bandOf(c) { if (!c.act) return 1; if (c.act.fading) return 2; return Date.now() - lastAct(c) < 10000 ? 0 : 1; }
 function riverLayout(cores) {
   const used = new Map(); for (const c of cores) if (c.aslot != null) used.set(c.aslot, (used.get(c.aslot) || 0) + 1);
@@ -115,33 +115,20 @@ function riverLayout(cores) {
     let best = pref, bd = Infinity; for (let i = 0; i < NSLOT; i++) { const d = Math.min(Math.abs(i - pref), NSLOT - Math.abs(i - pref)) + (used.get(i) || 0) * 100; if (d < bd) { bd = d; best = i; } } c.aslot = best; used.set(best, (used.get(best) || 0) + 1); }
   for (const c of cores) { if (c === S.sel && c.band != null) continue; // the selection never moves
     c.band = bandOf(c); const a = c.aslot / NSLOT * Math.PI * 2, R = BAND_R[c.band]; c.home.set(Math.cos(a) * R, 0, Math.sin(a) * R); }
-  placeGhosts();
 }
-const ringGeo = new THREE.BufferGeometry(); { const P = []; for (const R of BAND_R) for (let i = 0; i < 128; i++) { const a = i / 128 * Math.PI * 2, b = (i + 1) / 128 * Math.PI * 2; P.push(Math.cos(a) * R, FLOOR + .02, Math.sin(a) * R, Math.cos(b) * R, FLOOR + .02, Math.sin(b) * R); } ringGeo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); }
-const bandRings = new THREE.LineSegments(ringGeo, new THREE.LineDashedMaterial({ color: 0x3d5357, dashSize: .5, gapSize: .5, transparent: true, opacity: .7 })); bandRings.computeLineDistances(); scene.add(bandRings);
-// === Trail: what stopped being used stays as a silhouette at the end of the river ===
+// === Trail: recently closed folders; one that comes back rises from where it was ===
 const GH = new Map();
-const ghGeo = new THREE.BufferGeometry(); ghGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(18 * 24 * 3), 3).setUsage(THREE.DynamicDrawUsage));
-const ghLines = new THREE.LineSegments(ghGeo, new THREE.LineBasicMaterial({ color: 0x7fa3aa, transparent: true, opacity: .8, depthWrite: false })); ghLines.frustumCulled = false; ghLines.material.visible = false; scene.add(ghLines); // only flags whether there is a trail; drawn as cubes
-const GHMAX = 18, GH_COL = new THREE.Color('#262d31'); let ghCells = null; // no longer in use: dimmed, grey and slightly smaller
-const BOXE = [[-1,-1,-1,1,-1,-1],[1,-1,-1,1,-1,1],[1,-1,1,-1,-1,1],[-1,-1,1,-1,-1,-1],[-1,1,-1,1,1,-1],[1,1,-1,1,1,1],[1,1,1,-1,1,1],[-1,1,1,-1,1,-1],[-1,-1,-1,-1,1,-1],[1,-1,-1,1,1,-1],[1,-1,1,1,1,1],[-1,-1,1,-1,1,1]];
 function syncGhosts(mem) {
   const keep = new Set();
   for (const m of mem) { const k = K(m.path); keep.add(k); if (S.cubes.has(k)) continue; let g = GH.get(k);
-    if (!g) { const from = lastPos.get(k); g = { k, path: m.path, name: m.name, t: m.t, slot: lastAng.get(k), pos: from ? from.clone() : new THREE.Vector3(0, FLOOR, 0), tgt: new THREE.Vector3(), s: from ? 1 : 0, off: new THREE.Vector3() }; GH.set(k, g); } g.t = m.t; g.last = m.last; }
+    if (!g) { const from = lastPos.get(k); g = { k, path: m.path, name: m.name, t: m.t, pos: from ? from.clone() : new THREE.Vector3(0, FLOOR, 0) }; GH.set(k, g); } g.t = m.t; g.last = m.last; }
   for (const k of [...GH.keys()]) if (!keep.has(k) || S.cubes.has(k)) GH.delete(k);
 }
-function placeGhosts() { // each silhouette keeps its cube's angle, on the outer ring
-  const taken = new Set(); for (const g of [...GH.values()].sort((a, b) => b.t - a.t)) { let sl = g.slot ?? 0; for (let i = 0; i < NSLOT && taken.has(sl); i++) sl = (sl + 1) % NSLOT; taken.add(sl); const a = sl / NSLOT * Math.PI * 2; g.tgt.set(Math.cos(a) * BAND_R[3], -1.6, Math.sin(a) * BAND_R[3]); } }
-function pickGhost(x, y) { if (!ghLines.visible) return null; let best = null, bd = 34;
-  for (const g of GH.values()) { const [sx, sy, ok] = scr(g.pos); if (!ok) continue; const d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = g; } } return best; }
-const ghostMenu = g => [['Volver a abrir como cubo', () => post('/api/open', { path: g.path }).catch(e => feed('error', '#d9534f', e.message)), 'doble clic'], ['Explorar esta carpeta', () => { setLeft('explorer'); exGo(g.path); }], '-', ['Copiar ruta', () => copy(g.path)]];
-// Personal space and gravity: each cube occupies its real volume (larger when open or exploded). Overlapping cubes are pushed apart horizontally, heavier ones move less; the selected, dragged or hand-placed cube stays put. Gravity eases them back when there is room. Trail silhouettes are spaced too.
+// Personal space and gravity: each cube occupies its real volume (larger when open or exploded). Overlapping cubes are pushed apart horizontally, heavier ones move less; the selected, dragged or hand-placed cube stays put. Gravity eases them back when there is room.
 function spaceBodies(dt) {
   const B = [], decay = Math.pow(.8, dt), soft = Math.min(1, dt * 6);
   for (const c of S.vorder || []) { if (c.vis === false || c.s < .1 || c.leaving) continue; const ex = 1 + .9 * c.ex;
     B.push({ o: c, r: 1.5 * c.s * ex, h: 1.46 * c.s * ex, y: c.pos.y, m: c === S.sel || c === drag || c.manual ? Infinity : Math.pow(c.s * ex, 3) }); }
-  if (ghLines.visible) for (const g of GH.values()) B.push({ o: g, r: 1.5 * g.s, h: 1.5 * g.s, y: g.pos.y, m: .02 });
   if (lpCells.visible) for (const o of LP.values()) if (!o.dead && o.h > .3) B.push({ o: { pos: v3.set(o.base.x, LPB + o.h / 2, o.base.z).clone(), off: o.off }, r: o.h * .75, h: o.h / 2, y: LPB + o.h / 2, m: Infinity }); // processes stay put; cubes move around them
   for (const b of B) if (b.m !== Infinity) b.o.off.multiplyScalar(decay); // gravity: return home unless blocked
   for (let i = 0; i < B.length; i++) { const a = B[i];
@@ -154,74 +141,7 @@ function spaceBodies(dt) {
       if (wa < 1) { b.o.off.x += nx * push * (1 - wa); b.o.off.z += nz * push * (1 - wa); } } }
   for (const b of B) if (b.o.off.lengthSq() > 1600) b.o.off.setLength(40);
 }
-function stepGhosts(dt) {
-  if (!ghCells) ghCells = cellsOf(GHMAX * 27);
-  const on = false; ghLines.visible = ghCells.visible = on && GH.size > 0; if (!ghLines.visible) { ghCells.count = 0; return; } // "En vivo" shows current activity only: the trail is not drawn
-  { const A = ghCells.instanceMatrix.array, IC = ghCells.instanceColor.array; let n = 0; for (const g of GH.values()) { if (n >= GHMAX) break; const sp = g.s * .95, hv = g === S.ghHover ? 1.5 : 1;
-      for (let q = 0; q < 27; q++) { const b = BASE[q], j = n * 27 + q; setM(A, j, g.pos.x + b[0] * sp, g.pos.y + b[1] * sp, g.pos.z + b[2] * sp, sp * .9, sp * .9, sp * .9); IC[j * 3] = GH_COL.r * hv; IC[j * 3 + 1] = GH_COL.g * hv; IC[j * 3 + 2] = GH_COL.b * hv; } n++; }
-    ghCells.count = n * 27; ghCells.instanceMatrix.needsUpdate = true; ghCells.instanceColor.needsUpdate = true; }
-  const k = 1 - Math.pow(.05, dt), P = ghGeo.attributes.position.array; let m = 0;
-  for (const g of GH.values()) { if (m >= 18 * 24) break; g.pos.lerp(offT.copy(g.tgt).add(g.off), k * .6); g.s += (.62 - g.s) * k; const h = 1.5 * g.s;
-    for (const e of BOXE) { P.set([g.pos.x + e[0] * h, g.pos.y + e[1] * h, g.pos.z + e[2] * h, g.pos.x + e[3] * h, g.pos.y + e[4] * h, g.pos.z + e[5] * h], m * 3); m += 2; } }
-  ghGeo.setDrawRange(0, m); ghGeo.attributes.position.needsUpdate = true;
-}
-// === Heat: floor halo under each live cube (teal = disk, amber = AI) ===
-const heatIM = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: radTex('rgba(255,255,255,.9)', 'rgba(255,255,255,0)'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), 64);
-heatIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage); heatIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(64 * 3), 3); heatIM.frustumCulled = false; heatIM.renderOrder = -1; scene.add(heatIM);
-const HEAT_FS = new THREE.Color('#4fb3ad'), HEAT_AI = new THREE.Color('#e8a33d');
+// === Live activity: heat (breathing) and cool-down (sinking before leaving) ===
 const vivoHeat = c => { if (!c.act || c.act.fading) return 0; const age = (Date.now() - lastAct(c)) / 1000; return Math.min(1, (c.act.score || 0) / 12) * .6 + Math.exp(-age / 20) * .4; };
 const vivoCool = c => c.act && c.act.fading && c.act.leaveAt ? Math.min(1, Math.max(0, 1 - (c.act.leaveAt - Date.now()) / 8000)) : 0;
-
-// === Six faces (flat, monochrome) ===
-const T = (l, v, h) => ({ l, v: v == null || v === '' ? '—' : String(v), h: h || 0 });
-function facets(c) {
-  const d = c.data, s = S.sys, tot = d ? d.totals : null, g = d && d.git, gp = s && s.gpu, dk = d && d.disk, ag = c.agent || (d && d.agents) || null;
-  const L = (c === S.sel && S.procs && S.procs.linked) || { n: 0, ram: 0, cpu: 0, rd: 0, wr: 0 };
-  const memU = s ? (s.mem.total - s.mem.free) / s.mem.total : null, cores = s ? s.cpu : [], avg = cores.length ? cores.reduce((x, y) => x + y, 0) / cores.length : null;
-  const bins = []; for (let j = 0; j < 8; j++) { const a0 = Math.floor(j * cores.length / 8), b0 = Math.max(a0 + 1, Math.floor((j + 1) * cores.length / 8)), sl = cores.slice(a0, b0);
-    const v = sl.length ? sl.reduce((x, y) => x + y, 0) / sl.length : null; bins.push(T(sl.length > 1 ? `N${a0}–${b0 - 1}` : `N${a0}`, pct(v), v)); }
-  const aiN = [...c.ai.values()].filter(v => Date.now() - v.t < 600000).length;
-  return [
-    { name: 'DISCO', color: '#4fb3ad', head: tot ? fmtB(tot.bytes) : '…', tiles: [T('Archivos', tot && fmtN(tot.files) + (d.truncated ? '+' : '')), T('Carpetas', tot && fmtN(tot.dirs)), T('Mayor', d && d.largest && fmtB(d.largest.size)),
-      T('Medio', tot && tot.files ? fmtB(tot.bytes / tot.files) : '—'), T('Extensiones', d && d.extCount), T('Libre', dk && fmtB(dk.free), dk ? 1 - dk.free / dk.total : 0), T('Unidad', dk && fmtB(dk.total)), T('Escaneo', d && d.scanMs + ' ms')] },
-    { name: 'AGENTES', color: '#e8a33d', head: ag ? ag.sessions + ' ses.' : '…', hh: ag && ag.active ? 1 : 0, tiles: [T('Estado', ag && ag.active ? 'activa' : ago(ag && ag.last), ag && ag.active ? 1 : 0), T('Modelo', ag && ag.model ? ag.model.replace('claude-', '') : '—'),
-      T('Contexto', ag && ag.ctx != null ? fmtK(ag.ctx) + ' tok' : '—', ag && ag.ctx ? Math.min(1, ag.ctx / 1e6) : 0), T('Foco IA', aiN + ' arch.', Math.min(1, aiN / 10)), T('Sesiones', ag && fmtB(ag.bytes)),
-      T('Memorias', ag && ag.memories), T('Eventos fs', c.evCount, Math.min(1, c.evCount / 50)), T('Último', ago(c.lastEv), c.lastEv && Date.now() - c.lastEv < 4000 ? 1 : 0)] },
-    { name: 'RAM', color: '#aeb6bd', head: pct(memU), hh: memU, tiles: [T('Usada', s && fmtB(s.mem.total - s.mem.free), memU), T('Libre', s && fmtB(s.mem.free)), T('Total', s && fmtB(s.mem.total)),
-      T('Procesos', L.n), T('RAM vinc.', fmtB(L.ram), s ? Math.min(1, L.ram / s.mem.total * 4) : 0), T('Lectura/s', fmtB(L.rd), Math.min(1, L.rd / 5e6)), T('Escritura/s', fmtB(L.wr), Math.min(1, L.wr / 5e6)), T('Monitor', s && fmtB(s.srvRss))] },
-    { name: 'GPU', color: '#aeb6bd', head: gp ? (gp.util ?? '—') + ' %' : 'N/D', hh: gp ? gp.util / 100 : 0, tiles: gp ? [T('Modelo', gp.name.replace(/NVIDIA |GeForce /g, '')), T('VRAM', fmtB(gp.memUsed), gp.memUsed / gp.memTotal), T('Total', fmtB(gp.memTotal)),
-      T('VRAM %', pct(gp.memUsed / gp.memTotal), gp.memUsed / gp.memTotal), T('Temp', gp.temp != null ? Math.round(gp.temp) + ' °C' : '—', (gp.temp || 0) / 95), T('Potencia', gp.power != null ? Math.round(gp.power) + ' W' : '—'),
-      T('Ventilador', gp.fan != null ? gp.fan + ' %' : '—', (gp.fan || 0) / 100), T('Ctrl. mem', gp.memUtil != null ? gp.memUtil + ' %' : '—', (gp.memUtil || 0) / 100)] : Array.from({ length: 8 }, (_, i) => i ? { l: '', v: '', h: 0 } : T('Telemetría', 'sin nvidia-smi')) },
-    { name: 'CPU', color: '#aeb6bd', head: pct(avg), hh: avg, tiles: bins },
-    { name: 'VERSIONES', color: '#aeb6bd', head: g ? g.branch : (d ? 'sin git' : '…'), tiles: [T('Commits', g && g.commits), T('Sin commit', g && g.dirty, g ? Math.min(1, g.dirty / 20) : 0), T('Último', g && ago(g.lastTime)),
-      T('Mensaje', g && g.lastMsg), T('Creado', d && ago(d.created)), T('Modificado', d && ago(d.modified)), T('Más antiguo', d && ago(d.oldest)), T('Más reciente', d && ago(d.newest))] },
-  ];
-}
-function fit(g, text, max, size, min, weight) { do { g.font = `${weight} ${size}px "Segoe UI",system-ui,sans-serif`; if (g.measureText(text).width <= max) break; size -= 2; } while (size > min);
-  while (g.measureText(text).width > max && text.length > 3) text = text.slice(0, -2); return text; }
-function drawFace(c, fi, F) { // header (facet and main value) + 4 large metrics: readable even when the cube is small
-  const f = faces[fi], g = f.ctx, SZ = 512, P = 22; g.clearRect(0, 0, SZ, SZ); g.textBaseline = 'alphabetic'; g.textAlign = 'left';
-  g.strokeStyle = rgba(F.color, .5); g.lineWidth = 3; g.strokeRect(P, P, SZ - 2 * P, 132);
-  g.fillStyle = rgba(F.color, .95); g.fillText(fit(g, F.name, 230, 30, 18, 700), P + 18, P + 46);
-  g.fillStyle = '#f2f4f5'; g.textAlign = 'right'; g.fillText(fit(g, F.head, 240, 56, 22, 600), SZ - P - 18, P + 112); g.textAlign = 'left';
-  if (F.hh > 0) { g.fillStyle = rgba(F.color, .8); g.fillRect(P + 18, P + 118, (SZ - 2 * P - 36) * Math.min(1, F.hh), 4); }
-  for (let i = 0; i < 4; i++) { const t = F.tiles[i] || { l: '', v: '', h: 0 }, x = P + (i % 2) * ((SZ - 2 * P) / 2 + 6), y = P + 150 + (i / 2 | 0) * 162, w = (SZ - 2 * P) / 2 - 6;
-    g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 2; g.strokeRect(x, y, w, 150);
-    g.fillStyle = 'rgba(200,208,214,.75)'; g.fillText(fit(g, t.l.toUpperCase(), w - 28, 24, 15, 600), x + 14, y + 38);
-    g.fillStyle = '#eef1f3'; g.fillText(fit(g, t.v, w - 28, 46, 18, 600), x + 14, y + 118);
-    if (t.h > 0) { g.fillStyle = rgba(F.color, .8); g.fillRect(x + 14, y + 132, (w - 28) * Math.min(1, t.h), 4); } }
-  f.tex.needsUpdate = true;
-}
-let faceQ = 0, faceAcc = 0, faceCache = null;
-function stepFaces(dt) { const c = S.sel; if (!c || !c.data) return; faceAcc += dt; if (faceAcc < .08) return; faceAcc = 0; drawCellFace(c, faceQ); faceQ = (faceQ + 1) % 6; }
-function drawCellFace(c, fi) { // each slot = one cell of the cube: files (large), size and relative bar
-  const f = faces[fi], g = f.ctx, SZ = 512, W = SZ / 3, d = c.data, mx = Math.max(1, ...d.cells.map(x => x.files)), sig = FACE_MAP[fi].map(i => d.cells[i].files + ':' + d.cells[i].bytes).join() + (c.cell ?? '');
-  if (f.sig === sig && f.for === c.key) return; f.sig = sig; f.for = c.key; g.clearRect(0, 0, SZ, SZ); g.textAlign = 'center'; g.textBaseline = 'alphabetic';
-  FACE_MAP[fi].forEach((ci, k) => { const x = (k % 3) * W, y = (k / 3 | 0) * W, cell = d.cells[ci], col = TYPE_HEX[ci % 3], on = c.cell === ci;
-    g.strokeStyle = on ? '#ffffff' : rgba(col, .4); g.lineWidth = on ? 4 : 2; g.strokeRect(x + 12, y + 12, W - 24, W - 24);
-    if (!cell.files) { g.fillStyle = 'rgba(200,208,214,.22)'; g.font = '500 30px "Segoe UI",sans-serif'; g.fillText('·', x + W / 2, y + W / 2 + 10); return; }
-    g.fillStyle = '#f0f3f5'; g.font = '600 52px "Segoe UI",sans-serif'; g.fillText(fmtK(cell.files), x + W / 2, y + W / 2 + 4);
-    g.fillStyle = rgba(col, 1); g.font = '500 24px "Segoe UI",sans-serif'; g.fillText(fmtB(cell.bytes), x + W / 2, y + W / 2 + 38);
-    g.fillStyle = rgba(col, .85); g.fillRect(x + 26, y + W - 28, (W - 52) * Math.min(1, cell.files / mx), 4); });
-  f.tex.needsUpdate = true; }
 

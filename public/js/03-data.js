@@ -2,7 +2,7 @@
 // Copyright 2026 virtuanista
 //
 // Data handling: cube kinds, focus dimming, camera framing, activity particles,
-// system/process/agent views, AI focus probes, "Seguir IA" and attention matrices.
+// system/process/agent views, AI focus probes and "Seguir IA".
 // === Data ===
 let layT = 0;
 // kind of each cube, from its contents (server template) and location; shown on the lid emblem and in the tint
@@ -35,7 +35,7 @@ function applyScan(c, d) {
   c.data = d; c.lastScan = Date.now(); c.evCount = Math.max(c.evCount, d.events || 0);
   const max = Math.max(1, ...d.cells.map(x => x.bytes)); d.cells.forEach((x, i) => c.heat[i] = x.bytes > 0 ? .25 + .75 * Math.log(1 + x.bytes) / Math.log(1 + max) : 0);
   buildVoxels(c); drawLabel(c); c.kindData = null; applyKind(c); clearTimeout(layT); layT = setTimeout(() => { layout(); renderCubes(); }, 120);
-  if (c === S.sel) { renderTab(true); faceQ = 0; }
+  if (c === S.sel) renderTab();
 }
 const queue = []; let running = 0;
 function scanCube(c) { if (!queue.includes(c)) queue.push(c); pump(); }
@@ -93,14 +93,14 @@ function fitPts(pts, fill = .86) {
 function focusOn(pts, fill = .5, minD = 8, follow = false, center = null) { setTimeout(() => { if (center) pts = pts.concat(pts.map(p => center.clone().multiplyScalar(2).sub(p))); const r = fitPts(pts, fill); focusT.copy(center || r.ctr); /* with a center: the object stays in the middle and its surroundings fit */ focusDir = r.dir; focusD = Math.max(minD, r.d); focusSel = follow; focusing = true; }, 0); } // after the info panel opens, so its width is accounted for
 const cubeBox = c => { const h = 1.6 * Math.max(c.tScale || c.s, .3) * 1.77, p = (c.manual || (c.rel ? c.pos : c.home)).clone().add(c.off); const P = []; for (const a of [-1, 1]) for (const b of [-1, 1]) for (const d of [-1, 1]) P.push(p.clone().add(new THREE.Vector3(a * h, b * h, d * h))); return P; };
 function select(c, focus) { if (S.space === 'vivo' && c) post('/api/hold', { path: c.path }).catch(() => {});
-  if (!c) return; if (c.vis === false) { S.enter = c.parent && S.cubes.has(K(c.parent)) ? K(c.parent) : null; layout(); } S.sel = c; S.mode = 'cube'; faceQ = 0;
+  if (!c) return; if (c.vis === false) { S.enter = c.parent && S.cubes.has(K(c.parent)) ? K(c.parent) : null; layout(); } S.sel = c; S.mode = 'cube';
   if (focus) { focusT.copy(c.manual || (c.rel ? c.pos : c.home)).add(c.off); focusing = true; focusD = c.depth ? 7 + 9 * c.tScale : Math.max(16, 7 + (c._ext || 0) * 2.3);
     const par = c.parent && S.cubes.get(K(c.parent)), at = x => x.manual || (x.rel ? x.pos : x.home); focusDir = null;
     if (par) { const d = new THREE.Vector3().subVectors(at(c), at(par)).setY(0); if (d.lengthSq() > 1e-4) focusDir = d.normalize().add(new THREE.Vector3(0, .6, 0)).normalize(); } focusSel = !!focusDir; }
   renderCubes(); renderPanel(); pollProcs(); pollAgent(c); loadDeps(c);
 }
 function loadDeps(c) { if (c.deps) return; c.deps = { pending: true, nodes: [], m: [], deg: [], links: {} };
-  api('/api/deps?path=' + encodeURIComponent(c.path)).then(v => { c.deps = v; c.linkK = new Map(); for (const [a, l] of Object.entries(v.links || {})) c.linkK.set(K(a), new Set(l.map(K))); if (c === S.sel) renderTab(); }).catch(() => { c.deps = null; }); }
+  api('/api/deps?path=' + encodeURIComponent(c.path)).then(v => { c.deps = v; if (c === S.sel) renderTab(); }).catch(() => { c.deps = null; }); }
 function feed(kind, color, text) { const last = S.feed[0]; if (last && last.kind === kind && last.text === text) return;
   const dir = t => String(t).replace(/[\\/][^\\/]*$/, ''); if (last && last.kind === kind && dir(last.base || last.text) === dir(text) && dir(text) !== String(text)) { last.n = (last.n || 1) + 1; last.base = last.base || last.text; last.text = dir(text) + '/… ×' + last.n; feedDirty = true; return; } S.feed.unshift({ kind, color, text }); S.feed.length = Math.min(S.feed.length, 14); feedDirty = true; }
 let feedDirty = false;
@@ -108,7 +108,7 @@ function actorOf(abs, t) { const a = K(abs); for (const pr of S.sessions.values(
 const byYou = m => { if (!S.fg || !m.who) return null; const pids = [...String(m.who).matchAll(/#(\d+)/g)].map(x => +x[1]); if (pids.includes(S.fg.pid) || (S.fg.cur && pids.includes(S.fg.cur.pid))) return 'tú · ' + fgName(pids.includes(S.fg.pid) ? S.fg : S.fg.cur); return null; }; // done by the program you are using
 function onFs(m) {
   const c = S.cubes.get(K(m.root)); if (!c) return; m.by = m.by || actorOf(trimSep(c.path) + SEP(c.path) + m.file, m.t); if (m.by === 'vxtop') { c.evCount++; c.lastEv = m.t; if (deepestCube(trimSep(c.path) + SEP(c.path) + m.file) !== c) return; return feed('vxtop lee', '#5d666c', `${c.name}/${m.file.split(/[\\/]/).slice(-2).join('/')}`); }
-  c.evCount++; c.lastEv = m.t; c.events.unshift(m); c.events.length = Math.min(c.events.length, 30); c.hot.set(K(m.file), m.t);
+  c.evCount++; c.lastEv = m.t; c.events.unshift(m); c.events.length = Math.min(c.events.length, 30);
   const rd = m.type === 'acceso'; if (m.cell != null) { c.pulse[m.cell] = Math.max(c.pulse[m.cell], rd ? .35 : 1); if (((m.cell / 3 | 0) % 3) === 2) c.deepT = Date.now(); } c.cellDirty = true;
   const k = c.slotOf.get(K(m.file)); if (k != null) flashVox(c, k, rd ? .5 : .9, rd ? FL_RD : FL_FS);
   if (S.space === 'vivo' && VIEW.cur === 'espacio' && c.vis !== false) { const dst = k != null ? voxWorld(c, k, new THREE.Vector3()) : m.cell != null ? cellWorld(c, m.cell, new THREE.Vector3()) : c.pos.clone();
@@ -117,10 +117,8 @@ function onFs(m) {
     emit(from, dst, rd ? who.clone().multiplyScalar(.45) : who, rd ? 1 : 3, .9, src ? .35 : .05, .05);
     if (c.act) c.act.last = Math.max(c.act.last || 0, m.t || Date.now()); }
   const L = c.live, f = m.file; L.files = [f, ...L.files.filter(x => x !== f)].slice(0, 16);
-  for (const [g, t] of L.at) if (g !== f && m.t - t < 5000) { const kk = f < g ? f + '|' + g : g + '|' + f; L.w.set(kk, (L.w.get(kk) || 0) + 1); }
   L.at.set(f, m.t);
-  // information propagates up the hierarchy: cell -> parent cube
-  const par = c.parent && S.cubes.get(K(c.parent)); void par;
+  const par = c.parent && S.cubes.get(K(c.parent));
   followFs(m, c);
   const tmpN = /(^|[\\/])(temp|tmp|cache|caches|gpucache|code cache|crashpad)([\\/]|$)|\.(tmp|temp|lock|log|etl|journal)$|~$/i.test(m.file) || /[\\/]temp$/i.test(c.path);
   const you = !m.by && byYou(m); if (!tmpN && (c.depth === 0 || !par)) { const parts = m.file.split(/[\\/]/); feed((m.by ? m.by + ' ' : you ? you + ' ' : '') + m.type, m.by ? '#e8a33d' : you ? '#7fd6cf' : rd ? '#8a9399' : '#4fb3ad', `${c.name.replace(/[\\/]+$/, '')}/${parts.length > 3 ? '…/' + parts.slice(-2).join('/') : parts.join('/')}${m.who && !m.by ? ' · ' + m.who : ''}`); }
@@ -135,11 +133,10 @@ async function pollSys() {
   try { S.sys = await api('/api/sys'); } catch { return; }
   const s = S.sys; S.cpuHist.push(s.cpu.reduce((a, b) => a + b, 0) / (s.cpu.length || 1)); if (S.cpuHist.length > 90) S.cpuHist.shift();
   const nowP = Date.now();
-  for (const c of S.cubes.values()) { for (const [kk, v] of c.live.w) { if (v < .03) c.live.w.delete(kk); else c.live.w.set(kk, v * .985); }
-    for (const [f, t] of c.live.at) if (nowP - t > 600000) c.live.at.delete(f); for (const [f, t] of c.hot) if (nowP - t > 60000) c.hot.delete(f);
+  for (const c of S.cubes.values()) { for (const [f, t] of c.live.at) if (nowP - t > 600000) c.live.at.delete(f);
     for (const [f, v] of c.ai) if (nowP - v.t > 1800000) c.ai.delete(f); if (c.live.at.size > 400) c.live.at = new Map([...c.live.at].slice(-200)); }
   for (const pr of S.sessions.values()) if (pr.seen && pr.seen.size > 3000) pr.seen = new Set(pr.meta ? pr.meta.trace.map(e => e.t + '|' + e.tool + '|' + e.target) : []);
-  renderLayers(); if (S.tab !== 'canales') renderTab();
+  renderLayers(); renderTab();
 }
 async function pollProcs() { const c = S.sel; try { S.procs = await api('/api/procs' + (c ? '?path=' + encodeURIComponent(c.path) : '')); } catch {} }
 async function pollAgent(c) { try { c.agent = await api('/api/agent?path=' + encodeURIComponent(c.path)); } catch {} }
@@ -253,76 +250,5 @@ function stepProbes(dt, t, now) {
       } else emit(pr.pos, v1.copy(pr.pos).add(v2.set(Math.random() - .5, Math.random() - .5, Math.random() - .5).multiplyScalar(2)), pr.color, 6, .6, 0, .1);
     }
   }
-}
-
-// === Channels: attention matrices ===
-function linkOf(c, a, b) { const L = c.linkK; if (!L) return 0; return L.get(K(a))?.has(K(b)) ? 1 : L.get(K(b))?.has(K(a)) ? .55 : 0; }
-// AI FOCUS: transformer-style attention over the cube's files. Query = focused file; keys = files scored by AI touches (decaying, propagated through references and folder).
-function focusModel(c) {
-  const now = Date.now(), score = new Map();
-  for (const v of c.ai.values()) { const s = v.w * Math.exp(-(now - v.t) / 120000); if (s > .005) score.set(v.rel, (score.get(v.rel) || 0) + s); }
-  for (const [f, t] of c.live.at) { const s = .35 * Math.exp(-(now - t) / 30000); if (s > .005) score.set(f, (score.get(f) || 0) + s); }
-  const lab = [], seen = new Set(), add = r => { const k = r && K(r); if (!k || seen.has(k) || lab.length >= 16) return; seen.add(k); lab.push(r); };
-  [...score.entries()].sort((a, b) => b[1] - a[1]).forEach(([r]) => add(r));
-  for (const r of lab.slice(0, 6)) for (const t of (c.deps && c.deps.links && c.deps.links[r]) || []) add(t);
-  if (c.linkK) for (const [src, set] of Object.entries(c.deps.links || {})) { if (lab.length >= 12) break; if (lab.slice(0, 6).some(r => set.includes(r))) add(src); }
-  (c.data ? c.data.recent : []).forEach(f => add(f.rel));
-  const n = lab.length, f = lab.map(r => score.get(r) || 0), g = f.slice();
-  for (let j = 0; j < n; j++) for (let k = 0; k < n; k++) if (k !== j && f[k]) g[j] += .45 * f[k] * (linkOf(c, lab[k], lab[j]) + .3 * (dirOf(lab[k]) === dirOf(lab[j])));
-  const A = new Float32Array(n * n);
-  for (let i = 0; i < n; i++) { let mx = -1e9; const row = [];
-    for (let j = 0; j < n; j++) { const l = 2.2 * g[j] + 1.6 * linkOf(c, lab[i], lab[j]) + .5 * (dirOf(lab[i]) === dirOf(lab[j])) + (i === j ? .7 : 0); row.push(l); mx = Math.max(mx, l); }
-    let sum = 0; for (let j = 0; j < n; j++) { row[j] = Math.exp(row[j] - mx); sum += row[j]; } for (let j = 0; j < n; j++) A[i * n + j] = row[j] / sum; }
-  let q = -1, qt = 0; for (let i = 0; i < n; i++) { const v = c.ai.get(K(lab[i])); if (v && v.t > qt) { qt = v.t; q = i; } }
-  return { lab, f, g, A, q, n, active: f.some(x => x > .01) };
-}
-function stepAttention(c, dt) { // smooth interpolation: the matrix glides, it doesn't jump
-  const M = focusModel(c), prev = c.att, n = M.n, D = new Float32Array(n * n);
-  if (prev) { const ix = new Map(prev.lab.map((r, i) => [K(r), i]));
-    for (let i = 0; i < n; i++) { const pi = ix.get(K(M.lab[i])); for (let j = 0; j < n; j++) { const pj = ix.get(K(M.lab[j])); D[i*n+j] = pi != null && pj != null ? prev.D[pi * prev.n + pj] : 0; } } }
-  const k = 1 - Math.pow(.02, dt); for (let i = 0; i < n * n; i++) D[i] += (M.A[i] - D[i]) * k;
-  const G = new Float32Array(n); if (prev) { const ix = new Map(prev.lab.map((r, i) => [K(r), i])); for (let i = 0; i < n; i++) { const pi = ix.get(K(M.lab[i])); G[i] = pi != null ? prev.G[pi] : 0; } }
-  const gm = Math.max(1e-6, ...M.g); for (let i = 0; i < n; i++) G[i] += (M.g[i] / gm - G[i]) * k;
-  c.att = { ...M, D, G }; return c.att;
-}
-function drawFocus(cv, att, big) {
-  const g = cv.getContext('2d'), SZ = cv.width; g.fillStyle = '#000'; g.fillRect(0, 0, SZ, SZ);
-  if (!att || att.n < 2) { g.fillStyle = 'rgba(255,255,255,.3)'; g.font = `${SZ / 16}px "Segoe UI",sans-serif`; g.textAlign = 'center'; g.fillText('sin foco', SZ / 2, SZ / 2); return; }
-  const n = att.n, top = SZ * .07, cell = (SZ - top) / n, gap = n > 10 ? .8 : 1.5;
-  for (let j = 0; j < n; j++) { const v = att.G[j]; g.fillStyle = `rgba(232,163,61,${.08 + .9 * v})`; g.fillRect(j * cell + gap / 2, top * (1 - v) * .9, cell - gap, top * .9 * v + 1); }
-  for (let i = 0; i < n; i++) { let rm = 1e-6; for (let j = 0; j < n; j++) rm = Math.max(rm, att.D[i*n+j]);
-    for (let j = 0; j < n; j++) { const v = att.D[i*n+j] / rm, w = v * v; g.fillStyle = `rgb(${18 + 214 * w | 0},${16 + 147 * w | 0},${12 + 49 * w * w | 0})`; g.fillRect(j * cell + gap / 2, top + i * cell + gap / 2, cell - gap, cell - gap); } }
-  if (att.q >= 0) { g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = big ? 1.5 : 1; g.strokeRect(1, top + att.q * cell + .5, SZ - 2, cell - 1); }
-}
-function channels(c) {
-  const now = Date.now(), d = c.data, out = [];
-  out.push({ name: 'FOCO IA', color: '#e8a33d', labels: c.att ? c.att.lab : [], hint: 'atención: fila = consulta (archivo en foco), columna = clave · barra superior = foco propagado', focus: true,
-    val: (i, j) => c.att ? c.att.D[i * c.att.n + j] : 0 });
-  { const D = c.deps, n = D && D.nodes ? D.nodes.length : 0, mx = n ? Math.max(...D.deg) : 1;
-    out.push({ name: 'REFERENCIAS', color: '#6f8fb3', labels: n ? D.nodes : [], hint: D && !D.pending ? `fila → columna: quién nombra a quién · ${D.edges} enlaces en ${D.analyzed} archivos` : 'analizando…', empty: D && !D.pending ? 'sin referencias internas' : 'analizando…',
-      val: (i, j) => i === j ? .25 + .5 * D.deg[i] / mx : D.m[i][j] ? 1 : D.m[j][i] ? .3 : 0, hot: i => now - (c.ai.get(K(D.nodes[i]))?.t || 0) < 8000 }); }
-  { const f = d ? d.recent.slice(0, 16) : [], lt = f.map(x => Math.log(1 + Math.max(0, now - x.mtime) / 60000)), sp = Math.max(.5, (Math.max(...lt, 0) - Math.min(...lt, 0)) / 4);
-    out.push({ name: 'TIEMPO', color: '#4fb3ad', labels: f.map(x => x.rel), hint: 'co-modificación en escala logarítmica: archivos tocados en momentos cercanos', empty: 'sin archivos',
-      val: (i, j) => Math.exp(-Math.abs(lt[i] - lt[j]) / sp) * (dirOf(f[i].rel) === dirOf(f[j].rel) ? 1 : .55), hot: i => now - (c.hot.get(K(f[i].rel)) || 0) < 6000 }); }
-  { const L = c.live, f = L.files, mx = Math.max(1, ...L.w.values());
-    out.push({ name: 'EN VIVO', color: '#aeb6bd', labels: f, hint: 'disco ahora: archivos tocados dentro de la misma ventana de 5 s', empty: 'esperando actividad de disco',
-      val: (i, j) => i === j ? Math.exp(-(now - (L.at.get(f[i]) || 0)) / 15000) : (L.w.get(f[i] < f[j] ? f[i] + '|' + f[j] : f[j] + '|' + f[i]) || 0) / mx, hot: i => now - (L.at.get(f[i]) || 0) < 3000 }); }
-  return out;
-}
-function drawMx(cv, ch) {
-  const g = cv.getContext('2d'), SZ = cv.width, n = ch.labels.length; g.fillStyle = '#000'; g.fillRect(0, 0, SZ, SZ);
-  if (!n) { g.fillStyle = 'rgba(255,255,255,.28)'; g.font = '19px "Segoe UI",sans-serif'; g.textAlign = 'center'; g.fillText(ch.empty || 'sin datos', SZ / 2, SZ / 2); return; }
-  const w = SZ / n, gap = n > 10 ? 1.2 : 2.5;
-  for (let i = 0; i < n; i++) { const hot = ch.hot(i);
-    for (let j = 0; j < n; j++) { const v = Math.max(0, Math.min(1, ch.val(i, j) + (hot || ch.hot(j) ? .2 : 0)));
-      g.fillStyle = hot ? `rgba(255,255,255,${.1 + v * .85})` : rgba(ch.color, .03 + v * v * .95); g.fillRect(j * w + gap / 2, i * w + gap / 2, w - gap, w - gap); } }
-}
-function explain(c) {
-  const a = c.att; if (!a || a.q < 0 || !a.active) return a && a.n ? '<span class="note">La IA no está trabajando en este directorio ahora. La matriz muestra la estructura en reposo: referencias y carpetas.</span>' : '';
-  const n = a.n, q = a.q, v = c.ai.get(K(a.lab[q])), row = [];
-  for (let j = 0; j < n; j++) if (j !== q) row.push([j, a.D[q*n+j]]);
-  row.sort((x, y) => y[1] - x[1]);
-  const why = j => linkOf(c, a.lab[q], a.lab[j]) ? 'referencia' : dirOf(a.lab[q]) === dirOf(a.lab[j]) ? 'misma carpeta' : a.f[j] > .02 ? 'foco reciente' : 'contexto';
-  return `<b>${esc(v ? v.op : 'foco')}</b> ${esc(base(a.lab[q]))} · ${ago(v && v.t)}<br>→ ${row.slice(0, 3).map(([j, w]) => `${esc(base(a.lab[j]))} <span class="note">${(w * 100).toFixed(0)} % · ${why(j)}</span>`).join('<br>→ ')}`;
 }
 

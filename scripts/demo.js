@@ -4,15 +4,19 @@
 //
 // Demo: builds a fictional studio (projects, photos, docs, data) in the temp folder and opens it,
 // so vxtop can be tried or shown without exposing your own files.
-// Usage: node scripts/demo.js [--shot docs/assets/hero.png]   (--shot: save a screenshot and exit)
+// Usage: node scripts/demo.js                      open the demo in your browser
+//        node scripts/demo.js --shot <file.png>    save one screenshot and exit
+//        node scripts/demo.js --media <dir>        screenshots of every view and a short video (needs ffmpeg)
 
 'use strict';
 const fs = require('fs'), os = require('os'), path = require('path');
 const { spawn } = require('child_process');
 const { startServer, findChrome, freePort } = require('../test/helpers');
 
+const cdpFrames = { on: null }; // screencast frame handler while recording
 const HOUR = 3600e3, DAY = 24 * HOUR;
-const shotArg = process.argv.indexOf('--shot'), SHOT = shotArg > 0 ? path.resolve(process.argv[shotArg + 1]) : null;
+const argOf = f => { const i = process.argv.indexOf(f); return i > 0 ? path.resolve(process.argv[i + 1]) : null; };
+const SHOT = argOf('--shot'), MEDIA = argOf('--media');
 
 // name → { kind of files, how many, size range in KB, how old }
 const STUDIO = {
@@ -50,23 +54,52 @@ function build(root) {
   const dirs = Object.keys(STUDIO).map(n => path.join(root, n));
   const srv = await startServer({ dirs, home, extra: ['--demo'] });
   console.log(`Demo studio in ${root}\nvxtop → ${srv.url}`);
-  if (!SHOT) { const open = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', srv.url]] : [process.platform === 'darwin' ? 'open' : 'xdg-open', [srv.url]]; spawn(open[0], open[1], { stdio: 'ignore', detached: true }).unref(); return; }
+  if (!SHOT && !MEDIA) { const open = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', srv.url]] : [process.platform === 'darwin' ? 'open' : 'xdg-open', [srv.url]]; spawn(open[0], open[1], { stdio: 'ignore', detached: true }).unref(); return; }
 
-  // --shot: headless Chrome, dismiss the welcome, frame everything, select the busiest project, save
+  // --shot / --media: headless Chrome, dismiss the welcome, frame everything, capture
   const chrome = findChrome(); if (!chrome) throw new Error('Chrome not found (set CHROME_PATH)');
   const dbg = await freePort(), prof = fs.mkdtempSync(path.join(os.tmpdir(), 'vxtop-demo-chrome-'));
   const ch = spawn(chrome, ['--headless=new', `--remote-debugging-port=${dbg}`, `--user-data-dir=${prof}`, '--window-size=1600,900', '--use-angle=d3d11', '--enable-gpu', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let target; for (let i = 0; i < 40 && !target; i++) { await sleep(250); try { target = (await (await fetch(`http://127.0.0.1:${dbg}/json`)).json()).find(x => x.type === 'page'); } catch {} }
   const ws = new WebSocket(target.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
-  let id = 0; const wait = new Map(); ws.onmessage = e => { const m = JSON.parse(e.data); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } };
+  let id = 0; const wait = new Map(); ws.onmessage = e => { const m = JSON.parse(e.data); if (m.method === 'Page.screencastFrame' && cdpFrames.on) cdpFrames.on(m.params); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } };
   const cdp = (method, params = {}) => new Promise(r => { const i = ++id; wait.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
   const ev = x => cdp('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true }).then(r => r.result.result?.value);
   const key = async (k, code) => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, text: k }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code }); };
   await cdp('Page.navigate', { url: srv.url }); await sleep(6000);
   await ev(`localStorage.setItem('vxtop.welcome', '1'); document.querySelector('#modal [data-r]') && document.querySelector('#modal [data-r]').click(); 1`);
   await key('h', 'KeyH'); await sleep(2500);
-  const r = await cdp('Page.captureScreenshot', { format: 'png' });
-  fs.mkdirSync(path.dirname(SHOT), { recursive: true }); fs.writeFileSync(SHOT, Buffer.from(r.result.data, 'base64')); console.log('saved ' + SHOT);
+  const png = async file => { const r = await cdp('Page.captureScreenshot', { format: 'png' }); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.from(r.result.data, 'base64')); console.log('saved ' + file); };
+  if (SHOT) await png(SHOT);
+  if (MEDIA) await media({ cdp, ev, key, sleep, png, root });
   ws.close(); ch.kill(); srv.stop(); setTimeout(() => { try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }); } catch {} }, 1500);
 })().catch(e => { console.error(e.message); process.exit(1); });
+
+/** Screenshots of the main views and a ~12 s clip (mp4 + gif) with live activity in the demo studio. */
+async function media({ cdp, ev, key, sleep, png, root }) {
+  const { execFileSync } = require('child_process'), J = async x => JSON.parse(await ev(`JSON.stringify(${x})`));
+  const mouse = (type, x, y, extra = {}) => cdp('Input.dispatchMouseEvent', { type, x, y, ...extra });
+  const click = async (x, y) => { await mouse('mouseMoved', x, y); await mouse('mousePressed', x, y, { button: 'left', clickCount: 1 }); await mouse('mouseReleased', x, y, { button: 'left', clickCount: 1 }); };
+  const scr = name => `(() => { const S = window.__vxtop, c = [...S.cubes.values()].find(c => c.name === ${JSON.stringify(name)}); const v = c.pos.clone().project(S.camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; })()`;
+  const touch = (n = 6) => { for (let i = 0; i < n; i++) { const d = path.join(root, i % 2 ? 'web-app' : 'docs'); fs.writeFileSync(path.join(d, `live-${i}.${i % 2 ? 'ts' : 'md'}`), 'edit ' + Date.now()); } };
+  await png(path.join(MEDIA, 'overview.png'));
+  // video: frames from the screencast while things happen
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vxtop-frames-')); let n = 0; const t0 = Date.now();
+  cdpFrames.on = async p => { fs.writeFileSync(path.join(dir, `f${String(n++).padStart(4, '0')}.jpg`), Buffer.from(p.data, 'base64')); cdp('Page.screencastFrameAck', { sessionId: p.sessionId }); };
+  await cdp('Page.startScreencast', { format: 'jpeg', quality: 82, everyNthFrame: 1 });
+  touch(); await sleep(1500);
+  for (let i = 0; i < 40; i++) { const x = 900 + i * 6; if (i === 0) { await mouse('mouseMoved', 900, 450); await mouse('mousePressed', 900, 450, { button: 'left', clickCount: 1 }); } await mouse('mouseMoved', x, 450, { buttons: 1 }); await sleep(30); }
+  await mouse('mouseReleased', 1140, 450, { button: 'left', clickCount: 1 }); touch(); await sleep(1200);
+  const a = await J(scr('web-app')); await click(a[0], a[1]); touch(); await sleep(3200);
+  await png(path.join(MEDIA, 'selected.png')); touch(); await sleep(1500);
+  await key('Escape', 'Escape'); await key('h', 'KeyH'); await sleep(2200);
+  await cdp('Page.stopScreencast'); cdpFrames.on = null;
+  const secs = (Date.now() - t0) / 1000, fps = Math.max(5, Math.round(n / secs));
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', path.join(dir, 'f%04d.jpg'), '-vf', 'scale=1280:-2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', path.join(MEDIA, 'demo.mp4')]);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', path.join(dir, 'f%04d.jpg'), '-vf', 'fps=12,scale=880:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', path.join(MEDIA, 'demo.gif')]);
+  console.log(`saved demo.mp4 and demo.gif (${n} frames, ${secs.toFixed(1)} s)`); fs.rmSync(dir, { recursive: true, force: true });
+  // the other views
+  await key('a', 'KeyA'); await sleep(800); await ev(`window.__vxtop.trOpen(${JSON.stringify(root)})`); await sleep(4000); await png(path.join(MEDIA, 'tree.png'));
+  await key('a', 'KeyA'); await sleep(800); await key('v', 'KeyV'); await sleep(4500); await png(path.join(MEDIA, 'system.png')); await key('v', 'KeyV');
+}

@@ -12,9 +12,6 @@ const trIM = new THREE.InstancedMesh(trGeo, new THREE.MeshStandardMaterial({ col
 trIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage); trIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(TRMAX * 3), 3); trIM.count = 0; trIM.frustumCulled = false; trIM.visible = false; scene.add(trIM);
 const trLGeo = new THREE.BufferGeometry(); trLGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRMAX * 18), 3));
 const trLines = new THREE.LineSegments(trLGeo, new THREE.LineBasicMaterial({ color: 0x3f8f8a, transparent: true, opacity: .5, depthWrite: false })); trLines.frustumCulled = false; trLines.visible = false; scene.add(trLines);
-const trFloor = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: radTex('rgba(15,21,24,1)', 'rgba(3,4,5,1)'), depthWrite: false })); trFloor.renderOrder = -2; trFloor.visible = false; scene.add(trFloor);
-const trGrid = new THREE.GridHelper(1, 48, 0x15262a, 0x0f1b1e); trGrid.material.transparent = true; trGrid.material.opacity = .28; trGrid.material.depthWrite = false; trGrid.visible = false; scene.add(trGrid);
-const trShadow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: radTex('rgba(0,0,0,.9)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }), TRMAX); trShadow.frustumCulled = false; trShadow.count = 0; trShadow.visible = false; scene.add(trShadow);
 const trRing = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 64), new THREE.MeshBasicMaterial({ color: 0x4fb3ad, transparent: true, opacity: .8, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); trRing.rotation.x = -Math.PI / 2; trRing.visible = false; scene.add(trRing);
 const trSize = n => (n.depth ? 1 : 1.35) * (n.b != null && n.b > 0 ? .5 + 1.1 * Math.min(1, Math.max(0, (Math.log10(n.b + 1) - 3) / 8)) : .45);
 const TRC = { new: new THREE.Color(.07, .2, .19), mid: new THREE.Color(.08, .11, .16), old: new THREE.Color(.075, .08, .09), empty: new THREE.Color(.035, .038, .042), skip: new THREE.Color(.19, .13, .05), tmp: new THREE.Color() }; // tinted graphite, no glow
@@ -78,7 +75,7 @@ async function trLevels(N) { // like `tree -L N`: open N levels from the root, c
   const R = TR.root; if (!R) return;
   const gen = TR.gen; try { const r = await trFetch(R.path, N, TRMAX); if (gen !== TR.gen) return; trMerge(r.node, null, R.path); trWalk(R, (x, l) => { x.open = l < N && !!x.kids; }); R.open = !!R.kids; TR.dirty = true; TR.fit = true; } catch (er) { feed('error', '#e0605c', er.message); }
 }
-function trSelect(n, fly) { TR.sel = n; S.mode = 'tnode'; TR.dirtyCol = true; renderPanel(); renderCubes(); const pts = [n.tgt.clone().addScalar(n.ts + 1), n.tgt.clone().subScalar(n.ts + 1)]; if (n.open && n.kids) n.kids.slice(0, 200).forEach(k => k.vis && pts.push(k.tgt.clone())); setTimeout(() => { const p2 = [n.tgt.clone().addScalar(n.ts + 1), n.tgt.clone().subScalar(n.ts + 1)]; if (n.open && n.kids) n.kids.slice(0, 200).forEach(k => k.vis && p2.push(k.tgt.clone())); if (n.parent) { p2.push(n.parent.tgt.clone()); (n.parent.kids || []).slice(0, 40).forEach(k => k.vis && p2.push(k.tgt.clone())); } /* frame it with its parent and siblings for context */ focusOn(p2, .5, 8, false, n.tgt.clone()); }, 90); void fly; void pts; }
+function trSelect(n) { TR.sel = n; S.mode = 'tnode'; TR.dirtyCol = true; renderPanel(); renderCubes(); setTimeout(() => { const p2 = [n.tgt.clone().addScalar(n.ts + 1), n.tgt.clone().subScalar(n.ts + 1)]; if (n.open && n.kids) n.kids.slice(0, 200).forEach(k => k.vis && p2.push(k.tgt.clone())); if (n.parent) { p2.push(n.parent.tgt.clone()); (n.parent.kids || []).slice(0, 40).forEach(k => k.vis && p2.push(k.tgt.clone())); } /* frame it with its parent and siblings for context */ focusOn(p2, .5, 8, false, n.tgt.clone()); }, 90); }
 function trPick() { let best = null, bd = Infinity;
   for (const n of TR.list) { const h = n.s * .52 + .04; box.set(bmin.copy(n.pos).subScalar(h), bmax.copy(n.pos).addScalar(h)); if (!ray.ray.intersectBox(box, hit)) continue; const d = hit.distanceToSquared(ray.ray.origin); if (d < bd) { bd = d; best = n; } }
   return best; }
@@ -96,7 +93,7 @@ function renderTreePanel() {
     + (kids.length ? `<h2 class="sub">Subcarpetas por tamaño</h2>${kids.map(x => `<div class="extrow" data-tk="${esc(x.key)}" style="cursor:pointer"><span>${esc(x.name)}</span><div class="bar"><i style="width:${(x.b || 0) / mx * 100}%"></i></div><span>${x.b != null ? fmtB(x.b) : '—'}</span></div>`).join('')}` : '');
   const A = { t: () => trToggle(n), x3: () => trExpand(n, 3), c: () => trCollapse(n), root: () => trOpen(n.path), cube: () => { setView('espacio'); post('/api/open', { path: n.path }).catch(e => feed('error', '#d9534f', e.message)); }, copy: () => copy(n.path) };
   $('#tab').querySelectorAll('[data-ta]').forEach(b => b.onclick = () => A[b.dataset.ta]());
-  $('#tab').querySelectorAll('[data-tk]').forEach(r => r.onclick = () => { const x = TR.nodes.get(r.dataset.tk); if (x) trSelect(x, true); });
+  $('#tab').querySelectorAll('[data-tk]').forEach(r => r.onclick = () => { const x = TR.nodes.get(r.dataset.tk); if (x) trSelect(x); });
 }
 function renderTreeList(el) {
   const L = TR.list; $('#ncubes').textContent = L.length ? '· ' + fmtN(L.length) : '';
@@ -116,14 +113,11 @@ $('#trbar').onclick = e => { const x = e.target.closest('button'); if (!x || !TR
   if (x.dataset.tb === 'up') { const up = TR.root.path.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, ''); if (up && up !== TR.root.path) trOpen(/^[a-z]:$/i.test(up) ? up + '\\' : up); }
   if (x.dataset.tb === 'fit') fitAll(); };
 function stepTree(dt) {
-  const on = VIEW.cur === 'arbol' && !VW.o; trIM.visible = trLines.visible = on; trFloor.visible = trGrid.visible = trShadow.visible = false; if (!on) { trRing.visible = false; for (const s of TR.pool) s.visible = false; return; }
+  const on = VIEW.cur === 'arbol' && !VW.o; trIM.visible = trLines.visible = on; if (!on) { trRing.visible = false; for (const s of TR.pool) s.visible = false; return; }
   if (TR.dirty) { TR.dirty = false; trLayout(); renderCubes(); renderTrBar(); if (TR.sel && !TR.sel.vis) TR.sel = null; if (VIEW.cur === 'arbol') renderPanel(); if (TR.fit) { TR.fit = false; fitAll(); } }
   const L = TR.list, k = 1 - Math.pow(.004, dt), A = trIM.instanceMatrix.array;
   if (TR.moving) { let mv = false; L.forEach((n, i) => { n.pos.lerp(n.tgt, k); n.s += (n.ts - n.s) * k; if (n.pos.distanceToSquared(n.tgt) > 1e-5 || Math.abs(n.ts - n.s) > 1e-3) mv = true; setM(A, i, n.pos.x, n.pos.y, n.pos.z, n.s, n.s, n.s); });
     trIM.count = L.length; trIM.instanceMatrix.needsUpdate = true; TR.moving = mv;
-    { const SA = trShadow.instanceMatrix.array; L.forEach((n, i) => { const z = n.s * 2.1; setM(SA, i, n.pos.x, FLOOR + .006, n.pos.z, z, 1, z); }); trShadow.count = L.length; trShadow.instanceMatrix.needsUpdate = true;
-      const bx = new THREE.Box3(); L.forEach(n => bx.expandByPoint(n.tgt)); const c = bx.getCenter(v2), sz = Math.max(40, (bx.max.x - bx.min.x) * 1.5, (bx.max.z - bx.min.z) * 1.5); // size the floor and grid to the tree
-      trFloor.position.set(c.x, FLOOR - .02, c.z); trFloor.scale.set(sz * 1.6, 1, sz * 1.6); trGrid.position.set(c.x, FLOOR - .005, c.z); trGrid.scale.setScalar(sz); }
     const P = trLGeo.attributes.position.array; let m = 0, y = FLOOR + .02;
     for (const n of L) { const p = n.parent; if (!p) continue;
       if (TR.mode === 'radial') { P.set([p.pos.x, y, p.pos.z, n.pos.x, y, n.pos.z], m); m += 6; }

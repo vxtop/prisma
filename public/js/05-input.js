@@ -37,11 +37,10 @@ function handleMove() {
   const e = pendingMove; if (!e) return; pendingMove = null; const tip = $('#tip');
   if (drag) { aim(e); if (ray.ray.intersectPlane(ground, hit)) { drag.manual = (drag.manual || new THREE.Vector3()).copy(hit); drag.off.set(0, 0, 0); } tip.style.display = 'none'; return; }
   const busy = e.buttons || ctxEl.style.display === 'block', lph = busy ? null : pickLP(e.clientX, e.clientY); S.lpHover = lph; const h = busy || lph ? null : pick(e); setHover(h); let html = '';
-  const ghh = !busy && !lph && !h ? pickGhost(e.clientX, e.clientY) : null; if (ghh) html = `<b>${esc(ghh.name)}</b><br><span style="color:var(--dim)">usado hace ${ago(ghh.last || ghh.t)} · doble clic para reabrir</span>`;
   if (lph) { const p = lph.p; html = `<b>${esc(p.win || p.name)}</b><br><span style="color:var(--dim)">${p.name}${p.io ? ' · disco ' + fmtB(p.io) + '/s' : ''}${p.gpu ? ' · GPU ' + p.gpu + ' %' : ''}</span><br><span style="color:var(--dim)">${fmtB(p.ws)} · ${(p.cpu / ((S.sys && S.sys.cpu.length) || 1)).toFixed(1)} % CPU${p.n > 1 ? ' · ' + p.n + ' procesos' : ''} · ${(p.links || []).length} carpetas</span>`; }
   if (h && h.c) { const { c, idx } = h, cd = c.data && c.data.cells[idx]; html = `<b>${esc(c.name)}</b> <span style="color:var(--dim)">› celda</span><br>${esc(cellName(idx))}<br><span style="color:var(--dim)">${cd ? fmtN(cd.files) + ' archivos · ' + fmtB(cd.bytes) : '…'}</span>`; }
   else if (h && h.o) { const i = h.o.info; html = `<b>${esc(i.name)}</b><br><span style="color:var(--dim)">${KIND_TXT[i.kind] || i.kind} · ${fmtB(i.size)}</span>`; }
-  else if (h && h.node) { const n = h.node.n; html = nodeTip(h.node); }
+  else if (h && h.node) html = nodeTip(h.node);
   else if (h && h.tn) html = trTip(h.tn);
   else if (h && h.task) { const it = h.task; html = `<b>${esc(it.label)}</b><br><span style="color:var(--dim)">${esc(it.kind === 'perf' ? it.fmt(it.val()) : it.sub)}</span>`; }
   if (html) { tip.innerHTML = html + '<br><span style="color:rgba(255,255,255,.3)">clic · clic derecho</span>'; tip.style.display = 'block'; tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + 'px'; tip.style.top = e.clientY + 14 + 'px'; canvas.style.cursor = 'pointer'; }
@@ -58,7 +57,7 @@ canvas.addEventListener('pointerup', e => {
   if (m.node) { const n = m.node.n; if (n.kind === 'group-root') { const k = String(n.pid); G.open.has(k) ? G.open.delete(k) : G.open.add(k); pollSystem(); } else if (n.kind === 'group') { G.openG.add(String(n.pid)); feed('despliega', '#8a9399', n.name + ' ×' + n.count); pollSystem(); }
     selectNode(m.node); const nb = [m.node.pos.clone()]; for (const [a, b] of G.edges) { const o = a === m.node.id ? G.nodes.get(b) : b === m.node.id ? G.nodes.get(a) : null; if (o && nb.length < 12) nb.push(o.pos.clone()); }
     return focusOn(nb.length > 1 ? nb : [m.node.pos.clone().addScalar(4), m.node.pos.clone().subScalar(4)], .55, 16, false, m.node.pos.clone()); }
-  if (m.tn) { trToggle(m.tn); return trSelect(m.tn, false); } // tree folder: expand or collapse immediately
+  if (m.tn) { trToggle(m.tn); return trSelect(m.tn); } // tree folder: expand or collapse immediately
   if (m.task) { selectTask(m.task); const z = TKS.zones.find(q => q.k === m.task.zone); return focusOn(z ? [new THREE.Vector3(z.c.x - ZW / 2, 0, z.c.z - ZD / 2), new THREE.Vector3(z.c.x + ZW / 2, 4, z.c.z + ZD / 2)] : [new THREE.Vector3(m.task.x, 0, m.task.z)], .7, 18, false, new THREE.Vector3(m.task.x, 0, m.task.z)); }
   if (m.o) { selectObj(m.o, false); return enterViewer(m.o); } // a file opens in the viewer
   const c = m.c;
@@ -69,9 +68,9 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('dblclick', e => e.preventDefault()); // no double click: everything is done with a single click
 canvas.addEventListener('contextmenu', e => {
-  e.preventDefault(); if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const lpc = pickLP(e.clientX, e.clientY); if (lpc) return menu(e.clientX, e.clientY, lpMenu(lpc)); const ghc = pickGhost(e.clientX, e.clientY); if (ghc && !pick(e)) return menu(e.clientX, e.clientY, ghostMenu(ghc)); const m = pick(e); if (!m) return;
+  e.preventDefault(); if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const lpc = pickLP(e.clientX, e.clientY); if (lpc) return menu(e.clientX, e.clientY, lpMenu(lpc)); const m = pick(e); if (!m) return;
   if (m.node) return menu(e.clientX, e.clientY, nodeMenu(m.node));
-  if (m.tn) { trSelect(m.tn, false); return menu(e.clientX, e.clientY, trMenu(m.tn)); }
+  if (m.tn) { trSelect(m.tn); return menu(e.clientX, e.clientY, trMenu(m.tn)); }
   if (m.task) return menu(e.clientX, e.clientY, taskMenu(m.task));
   if (m.o) return menu(e.clientX, e.clientY, objMenu(m.o));
   const c = m.c, files = c.data ? c.data.cells[m.idx].top : [];

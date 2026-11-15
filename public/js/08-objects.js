@@ -4,7 +4,7 @@
 // File objects: each file rendered with the view for its type.
 // === Objects ===
 const OB = { list: [], sel: null, hover: null, id: 0, dying: [] };
-const objGeo = new THREE.PlaneGeometry(1, 1), objEdge = new THREE.EdgesGeometry(objGeo), tabGeo = new RoundedBoxGeometry(1, 1, .08, 2, .025), spineGeo = new THREE.BoxGeometry(.016, 1.04, .1);
+const objGeo = new THREE.PlaneGeometry(1, 1), tabGeo = new RoundedBoxGeometry(1, 1, .08, 2, .025), spineGeo = new THREE.BoxGeometry(.016, 1.04, .1);
 const olGeo = new THREE.BufferGeometry(); olGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(16 * 6), 3));
 const objLines = new THREE.LineSegments(olGeo, new THREE.LineBasicMaterial({ color: 0x8fa3a8, transparent: true, opacity: .35, depthWrite: false })); objLines.frustumCulled = false; scene.add(objLines);
 async function openObject(p, focus = true) {
@@ -12,18 +12,17 @@ async function openObject(p, focus = true) {
   let info; try { info = await apiT('/api/file?path=' + encodeURIComponent(p)); } catch (e) { feed('error', '#d9534f', e.message); return; }
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 640; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const mesh = new THREE.Mesh(objGeo, new THREE.MeshBasicMaterial({ map: tex, color: 0xe2e2e2, toneMapped: false, side: THREE.DoubleSide, transparent: true, depthWrite: true })); // just below white so it does not bloom
-  const frame = new THREE.LineSegments(objEdge, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })); frame.visible = false; mesh.add(frame);
   const slab = new THREE.Mesh(tabGeo, new THREE.MeshStandardMaterial({ color: GRAPHITE, roughness: .8, metalness: .05 })); slab.position.z = -.05; slab.scale.set(1.07, 1.07, 1); mesh.add(slab);
   const spine = new THREE.Mesh(spineGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(KIND_COL[info.kind] || '#888').multiplyScalar(.9), toneMapped: false })); spine.position.set(-.545, 0, -.03); mesh.add(spine);
   const label = textSprite(1024, 128); label.material.sizeAttenuation = false; label.center.set(.5, 1); scene.add(mesh, label);
-  o = { id: ++OB.id, path: info.path, info, mesh, frame, slab, spine, tex, cv, label, aspect: .8, pos: new THREE.Vector3(), s: .01, el: null, scroll: 0, wave: null };
+  o = { id: ++OB.id, path: info.path, info, mesh, slab, spine, tex, cv, label, aspect: .8, pos: new THREE.Vector3(), s: .01, el: null, scroll: 0, wave: null };
   drawText(label, [[info.name, 46, 'rgba(238,241,243,.9)', 50], [`${KIND_TXT[info.kind] || info.kind} · ${fmtB(info.size)}`, 30, KIND_COL[info.kind] || '#888', 100]]);
   OB.list.push(o); if (OB.list.length > 12) closeObj(OB.list[0]);
   objAnchor(o, OB.list.length - 1, o.pos); o.pos.y -= 2; buildPreview(o); selectObj(o, focus); feed('objeto', KIND_COL[info.kind] || '#888', info.name);
 }
 function closeObj(o, now) {
   if (!now && !o.view) { if (OB.list.includes(o)) { OB.list.splice(OB.list.indexOf(o), 1); OB.dying.push(o); if (OB.sel === o) { OB.sel = null; if (S.mode === 'obj') { S.mode = 'cube'; renderPanel(); } } } return; }
-  scene.remove(o.mesh, o.label); o.mesh.material.dispose(); o.frame.material.dispose(); o.tex.dispose(); o.label.userData.tex.dispose(); o.label.material.dispose();
+  scene.remove(o.mesh, o.label); o.mesh.material.dispose(); o.tex.dispose(); o.label.userData.tex.dispose(); o.label.material.dispose();
   if (VW.o === o) exitViewer(true); if (o.pdf) o.pdf.destroy(); if (o.audio) o.audio.pause();
   if (o.el) { o.el.pause(); o.el.removeAttribute('src'); o.el.load(); } if (o.model) { scene.remove(o.model); disposeTree(o.model); } if (OB.list.includes(o)) OB.list.splice(OB.list.indexOf(o), 1);
   if (OB.sel === o) { OB.sel = null; if (S.mode === 'obj') { S.mode = 'cube'; renderPanel(); } }

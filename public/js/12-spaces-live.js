@@ -95,14 +95,14 @@ const lpFgRing = new THREE.Mesh(new THREE.RingGeometry(.94, 1, 64), new THREE.Me
 // live screen: the foreground window image, floating above its cube
 const fgScreen = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, toneMapped: false, opacity: .96 })); fgScreen.visible = false; fgScreen.center.set(.5, 0); scene.add(fgScreen);
 const fgFrame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(1, 1)), new THREE.LineBasicMaterial({ color: 0xe8a33d, transparent: true, opacity: .8, toneMapped: false })); fgFrame.visible = false; scene.add(fgFrame);
-let fgShotBusy = false, fgShotT = 0, fgAspect = .56;
+let fgShotBusy = false, fgAspect = .56;
 function pullFgShot() { if (!SET.screens) { fgScreen.material.map = null; return; } if (fgShotBusy || !S.fg || /^vxtop$/.test(S.fg.title || '') || S.space !== 'vivo' || VIEW.cur !== 'espacio') return; fgShotBusy = true;
   fetch('/api/fgshot?t=' + TK(), { cache: 'no-store' }).then(r => r.status === 200 ? r.blob() : null).then(b => { if (!b) return; const u = URL.createObjectURL(b); return new Promise(ok => { const img = new Image(); img.onload = () => { URL.revokeObjectURL(u); ok(img); }; img.onerror = () => { URL.revokeObjectURL(u); ok(null); }; img.src = u; }).then(img => { if (!img) return; const tx = fgScreen.material.map; if (tx) tx.dispose(); const nt = new THREE.Texture(img); nt.colorSpace = THREE.SRGBColorSpace; nt.needsUpdate = true; fgScreen.material.map = nt; fgScreen.material.needsUpdate = true; fgAspect = img.height / img.width; }); }).catch(() => {}).finally(() => { fgShotBusy = false; }); }
 setInterval(pullFgShot, 1000);
 const lpCurRing = new THREE.Mesh(new THREE.RingGeometry(.9, .96, 64), new THREE.MeshBasicMaterial({ color: 0x4fb3ad, transparent: true, opacity: .8, depthWrite: false, toneMapped: false })); lpCurRing.visible = false; scene.add(lpCurRing); // ring for the program under the cursor
 const lpCells = cellsOf(LPMAX * 27), UPORDER = [...Array(27).keys()].sort((a, b) => BASE[a][1] - BASE[b][1] || a - b); // cell indices ordered bottom-up
 const scrGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-const LP_COL = { claude: new THREE.Color('#e8a33d'), app: new THREE.Color('#5f8f95'), node: new THREE.Color('#6f9a5c'), proc: new THREE.Color('#5d666c') }, lpTmp = new THREE.Color();
+const lpTmp = new THREE.Color();
 function syncLiveProcs(list) {
   { const g = new Map(); for (const p of list || []) { const k = p.win || p.name; const e = g.get(k); if (!e) g.set(k, { ...p, n: 1, pids: [p.pid], links: [...(p.links || [])] }); else { e.n++; e.pids.push(p.pid); e.cpu += p.cpu; e.ws += p.ws; for (const l of p.links || []) if (!e.links.includes(l)) e.links.push(l); } } list = [...g.values()]; }
   const seen = new Set();
@@ -124,11 +124,11 @@ function stepLiveProcs(dt, t) {
     const isFg = !!(S.fg && (o.p.pids || [o.p.pid]).includes(S.fg.pid)); o.fg = isFg;
     const sel = o === S.lpSel, hov = o === S.lpHover, E = o.h * (hov || sel ? 1.06 : 1) * (isFg ? 1.35 : 1), sp = E / 3, cy = LPB + E / 2 + .02, w = E; o.pos.set(o.base.x, LPB + E, o.base.z);
     for (let q = 0; q < 27; q++) { const b = BASE[q]; setM(A, i * 27 + q, o.base.x + b[0] * sp, cy + b[1] * sp, o.base.z + b[2] * sp, sp * .9, sp * .9, sp * .9); }
-    const rel = !S.sel || (p.links || []).some(q => K(q) === S.sel.key), heat = Math.min(1, p.cpu / 60), br = (sel ? 1.8 : hov ? 1.45 : 1) * (rel ? 1 : .4) * (1 + heat * .9 * (.85 + .15 * Math.sin(t * (2 + heat * 6) + i)));
+    const rel = !S.sel || (p.links || []).some(q => K(q) === S.sel.key), heat = Math.min(1, p.cpu / 60);
     const kc = lpTmp.set(procCat(p.name, o.kind)[1]), fl = o.flash ? Math.max(0, 1 - (performance.now() - o.flash) / 1200) : 0, dim = (sel ? 1.6 : hov ? 1.3 : isFg ? 1.45 : 1) * (rel || isFg ? 1 : .45), lit = p.cpu > .5 ? Math.max(1, Math.round(heat * 27)) : 0;
     for (let q = 0; q < 27; q++) { const on2 = UPORDER.indexOf(q) < lit, f = on2 ? (1.1 + .25 * Math.sin(t * (2 + heat * 5) + q)) : .34 + fl; const o3 = (i * 27 + q) * 3; // off: graphite tinted by type; on: full type color
       IC[o3] = (GRAPHITE.r * (1 - f * .6) + kc.r * f * .6) * dim; IC[o3 + 1] = (GRAPHITE.g * (1 - f * .6) + kc.g * f * .6) * dim; IC[o3 + 2] = (GRAPHITE.b * (1 - f * .6) + kc.b * f * .6) * dim; }
-    i++; void br;
+    i++;
     o.icon.position.set(o.base.x, LPB + E + .03, o.base.z); o.icon.scale.setScalar(w * .62); o.icon.material.opacity = (rel ? 1 : .4) * Math.min(1, o.h * 2);
     if (sel || hov || isFg || (S.fg && S.fg.cur && (p.pids || [p.pid]).includes(S.fg.cur.pid))) for (const lp of p.links || []) { const c = S.cubes.get(K(lp)); if (!c || c.vis === false || m >= 96) continue; /* line = this program uses this folder */ const col = o.kind === 'claude' ? [.7, .45, .14] : [.12, .4, .38], f = sel || hov ? 2 : 1;
       P.set([o.pos.x, o.pos.y, o.pos.z, c.pos.x, c.pos.y, c.pos.z], m * 6); C.set([...col.map(x => x * f), ...col.map(x => x * .35 * f)], m * 6); m++;
