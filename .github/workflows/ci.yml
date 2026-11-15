@@ -14,8 +14,8 @@ jobs:
         node: [18, 22]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
       - run: npm run check
@@ -23,7 +23,7 @@ jobs:
       - name: End-to-end (headless Chrome)
         if: matrix.node == 22
         run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: screenshots-${{ matrix.os }}-${{ matrix.node }}

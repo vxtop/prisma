@@ -35,7 +35,7 @@ function makeFixture() {
 async function startServer({ dirs = [], home, live = false, extra = [] }) {
   const port = await freePort();
   const args = [path.join(ROOT, 'server.js'), ...dirs, '--no-open', '--port', String(port), ...(live ? [] : ['--no-live']), ...extra];
-  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, LOCALAPPDATA: path.join(home, 'AppData', 'Local'), APPDATA: path.join(home, 'AppData', 'Roaming') }; // keep every per-user cache inside the throwaway home
   const proc = spawn(process.execPath, args, { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   let log = ''; proc.stdout.on('data', d => { log += d; }); proc.stderr.on('data', d => { log += d; });
   const url = `http://127.0.0.1:${port}/`;
