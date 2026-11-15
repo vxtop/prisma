@@ -1,0 +1,22 @@
+vxtop
+Copyright 2026 virtuanista
+
+This product is vxtop, created and designed by virtuanista.
+https://github.com/vxtop/vxtop
+
+If you redistribute vxtop or a work derived from it, you must keep this NOTICE
+file and give visible credit to the original author, as required by section 4(d)
+of the Apache License, Version 2.0.
+
+-------------------------------------------------------------------------------
+Third-party components bundled in public/vendor/:
+
+three.js 0.160 — MIT License — Copyright 2010-2023 three.js authors
+  including OrbitControls, post-processing passes and the GLTF, OBJ, STL and FBX loaders
+Draco decoder — Apache License 2.0 — Copyright Google LLC
+meshoptimizer decoder — MIT License — Copyright Arseny Kapoulkine
+fflate — MIT License — Copyright 2020 Arjun Barrett
+PDF.js 4.10.38 — Apache License 2.0 — Copyright Mozilla Foundation
+
+License texts: public/vendor/three/LICENSE and public/vendor/pdfjs/LICENSE;
+the Draco, meshoptimizer and fflate files carry their license in their headers.

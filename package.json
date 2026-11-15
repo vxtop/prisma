@@ -1,0 +1,57 @@
+{
+  "name": "vxtop",
+  "version": "0.6.0",
+  "description": "A read-only 3D observatory of your computer: folders as data cubes, programs, live file activity and AI agents.",
+  "keywords": [
+    "3d",
+    "visualization",
+    "file-system",
+    "monitor",
+    "observability",
+    "three.js",
+    "claude-code",
+    "mcp",
+    "olap",
+    "read-only"
+  ],
+  "homepage": "https://github.com/vxtop/vxtop#readme",
+  "bugs": {
+    "url": "https://github.com/vxtop/vxtop/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vxtop/vxtop.git"
+  },
+  "license": "Apache-2.0",
+  "author": "virtuanista",
+  "bin": {
+    "vxtop": "server.js",
+    "vxtop-mcp": "mcp.js"
+  },
+  "files": [
+    "server.js",
+    "indexer.js",
+    "mcp.js",
+    "pshost.ps1",
+    "pickdirs.ps1",
+    "vxtop.vbs",
+    "public",
+    "README.md",
+    "README.es.md",
+    "LICENSE",
+    "NOTICE",
+    "docs/",
+    "scripts/"
+  ],
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js",
+    "test:e2e": "node test/e2e.js",
+    "test:live": "node test/e2e.js --live",
+    "check": "node --check server.js && node --check indexer.js && node --check mcp.js",
+    "demo": "node scripts/demo.js"
+  },
+  "engines": {
+    "node": ">=18.15"
+  }
+}

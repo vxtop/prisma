@@ -1,0 +1,6 @@
+# utilidades personales
+claude-cuentas.bat
+node_modules/
+*.log
+.DS_Store
+test/artifacts/
