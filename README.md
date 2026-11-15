@@ -5,7 +5,11 @@
 
 [Leer en español](README.es.md) · [Guía (ES)](docs/guia.md) · [Guide (EN)](docs/en/guide.md) · [Architecture](docs/architecture.md)
 
-![vxtop](docs/assets/hero.png)
+![vxtop: folders and programs as cubes, live](docs/assets/demo.gif)
+
+| Selected folder | Tree view |
+|---|---|
+| ![](docs/assets/selected.png) | ![](docs/assets/tree.png) |
 
 ## Why
 

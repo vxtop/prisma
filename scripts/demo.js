@@ -48,7 +48,8 @@ function build(root) {
 }
 
 (async () => {
-  const root = path.join(os.homedir(), '.vxtop', 'demo', 'studio'), home = path.join(os.homedir(), '.vxtop', 'demo', 'home'); // inside vxtop's own folder (not Temp, which would make every cube a «cache»)
+  // a path without your user name, so screenshots can be shared (and not under Temp, which would make every cube a «cache»)
+  const base = process.platform === 'win32' && process.env.PUBLIC ? path.join(process.env.PUBLIC, 'vxtop-demo') : path.join(os.tmpdir(), 'vxtop-demo'), root = path.join(base, 'studio'), home = path.join(base, 'home');
   fs.rmSync(root, { recursive: true, force: true }); fs.mkdirSync(root, { recursive: true }); fs.mkdirSync(home, { recursive: true });
   build(root);
   const dirs = Object.keys(STUDIO).map(n => path.join(root, n));
@@ -101,5 +102,4 @@ async function media({ cdp, ev, key, sleep, png, root }) {
   console.log(`saved demo.mp4 and demo.gif (${n} frames, ${secs.toFixed(1)} s)`); fs.rmSync(dir, { recursive: true, force: true });
   // the other views
   await key('a', 'KeyA'); await sleep(800); await ev(`window.__vxtop.trOpen(${JSON.stringify(root)})`); await sleep(4000); await png(path.join(MEDIA, 'tree.png'));
-  await key('a', 'KeyA'); await sleep(800); await key('v', 'KeyV'); await sleep(4500); await png(path.join(MEDIA, 'system.png')); await key('v', 'KeyV');
 }

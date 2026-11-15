@@ -104,7 +104,7 @@ async function allProcs() {
     if (procCache.t) { const old = procCache.list, was = new Set(old.map(p => p.pid)), byPid = new Map(list.map(p => [p.pid, p])), ev = [];
       for (const p of list) if (!was.has(p.pid) && p.pid !== process.pid) ev.push({ k: 'proc', type: 'inicia', pid: p.pid, name: p.name, win: p.win, parent: (byPid.get(p.ppid) || old.find(o => o.pid === p.ppid) || {}).name || null });
       const now2 = new Set(list.map(p => p.pid)); for (const p of old) if (!now2.has(p.pid)) ev.push({ k: 'proc', type: 'termina', pid: p.pid, name: p.name });
-      if (ev.length && ev.length < 60) for (const e of ev.slice(0, 12)) send(e); }
+      if (!flags.demo && ev.length && ev.length < 60) for (const e of ev.slice(0, 12)) send(e); } // --demo: no real process start/stop in the feed
     refreshGpu(); for (const p of list) p.gpu = +(gpuProc.m[p.pid] || 0);
     procCache = { t: now, list, prev: next, inflight: null };
     return list;

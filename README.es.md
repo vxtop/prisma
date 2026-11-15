@@ -5,7 +5,11 @@
 
 [Read in English](README.md) · [Guía completa](docs/guia.md) · [Arquitectura](docs/architecture.md)
 
-![vxtop](docs/assets/hero.png)
+![vxtop: carpetas y programas como cubos, en vivo](docs/assets/demo.gif)
+
+| Carpeta seleccionada | Vista Árbol |
+|---|---|
+| ![](docs/assets/selected.png) | ![](docs/assets/tree.png) |
 
 ## Para qué
 
