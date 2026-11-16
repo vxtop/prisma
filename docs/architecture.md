@@ -1,5 +1,6 @@
 # Architecture
-n> [README (EN)](../README.en.md) · [Guide](en/guide.md) · [Arquitectura (ES)](arquitectura.md)
+
+> [README (EN)](../README.en.md) · [Guide](en/guide.md) · [Arquitectura (ES)](arquitectura.md)
 
 vxtop is a local web app: a Node.js server that **reads** the machine and a three.js client that draws it. No npm dependencies, no build step.
 
