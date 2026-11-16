@@ -1,50 +1,50 @@
-# Contributing to vxtop
+# Contribuir a vxtop
 
-Thanks for your interest. vxtop is small on purpose: plain Node.js, no npm dependencies, no build step. Please keep it that way.
+Gracias por tu interés. vxtop es pequeño a propósito: Node.js sin más, sin dependencias de npm y sin paso de compilación. Por favor, mantenlo así.
 
-## Ground rules
+## Reglas básicas
 
-1. **Read-only, always.** vxtop observes; it never creates, modifies or deletes anything it looks at, and never acts on processes or the system. The only folder it may write to is its own (`~/.vxtop`). Pull requests that break this are not accepted.
-2. **Local and private.** The server listens on `127.0.0.1` only, every API call carries the session token, and nothing is sent to external services.
-3. **No new dependencies.** Third-party code goes to `public/vendor/` with its license, and only when there is no reasonable alternative.
+1. **Solo lectura, siempre.** vxtop observa: nunca crea, modifica ni borra nada de lo que mira, y nunca actúa sobre procesos ni sobre el sistema. La única carpeta en la que puede escribir es la suya (`~/.vxtop`). No se aceptan *pull requests* que rompan esta regla.
+2. **Local y privado.** El servidor solo escucha en `127.0.0.1`, cada llamada a la API lleva el token de sesión y no se envía nada a servicios externos.
+3. **Sin dependencias nuevas.** El código de terceros va en `public/vendor/` con su licencia, y solo cuando no hay una alternativa razonable.
 
-## Getting started
+## Empezar
 
 ```bash
 git clone https://github.com/vxtop/vxtop.git
 cd vxtop
-node server.js --port 4899      # a second instance next to your everyday one
+node server.js --port 4899      # una segunda instancia junto a la que usas a diario
 ```
 
-Edits to `public/` show up on reload; edits to `server.js` need a restart.
+Los cambios en `public/` se ven al recargar; los cambios en `server.js` necesitan reiniciar.
 
-## Code style
+## Estilo de código
 
-- Code, identifiers and comments in **English**; user-facing text (UI, CLI messages) in **Spanish**.
-- Comments explain *why*, not *what*. Keep them short.
-- Every source file starts with the SPDX header:
+- Código, identificadores y comentarios en **inglés**; los textos que ve el usuario (interfaz, mensajes de la terminal) en **español**.
+- Los comentarios explican el *porqué*, no el *qué*. Que sean cortos.
+- Todos los ficheros de código empiezan con la cabecera SPDX:
   ```js
   // SPDX-License-Identifier: Apache-2.0
   // Copyright 2026 virtuanista
   ```
-- The client is one ES module split into ordered files (`public/js/NN-name.js`) that share a single scope. Put new code in the file of its area; add a new numbered file only for a new area. See [docs/architecture.md](docs/architecture.md).
-- Visual rules: everything is drawn as 27-cell cubes (folders, programs), told apart by colour, size and emblem; nothing moves without a reason; one click does everything.
+- El cliente es un único módulo ES repartido en ficheros ordenados (`public/js/NN-nombre.js`) que comparten un solo ámbito. Pon el código nuevo en el fichero de su área y crea un fichero numerado nuevo solo para un área nueva. Más en [docs/arquitectura.md](docs/arquitectura.md).
+- Reglas visuales: todo se dibuja como cubos de 27 celdas (carpetas y programas), que se distinguen por color, tamaño y emblema; nada se mueve sin motivo; un clic lo hace todo.
 
-## Tests
+## Pruebas
 
 ```bash
-npm run check        # syntax
-npm test             # smoke test, no browser: token, read-only, bundle
-npm run test:e2e     # headless Chrome: clicks, focus, races, zoom, views, tree, search
-npm run test:live    # same, plus the live space with real programs
+npm run check        # sintaxis
+npm test             # prueba rápida, sin navegador: token, solo lectura, paquete
+npm run test:e2e     # Chrome sin interfaz: clics, foco, carreras, zoom, vistas, árbol, búsqueda
+npm run test:live    # lo mismo, más el espacio en vivo con programas reales
 ```
 
-Tests use a throwaway fixture and home folder under the OS temp directory; they never touch your data. Screenshots go to `test/artifacts/`.
+Las pruebas usan un árbol de prueba y una carpeta personal desechables dentro de la carpeta temporal del sistema: nunca tocan tus datos. Las capturas se guardan en `test/artifacts/`.
 
 ## Pull requests
 
-- One topic per pull request, with a short description of the *why*.
-- `npm run check`, `npm test` and `npm run test:e2e` pass.
-- UI changes: attach a before/after screenshot.
+- Un tema por *pull request*, con una descripción breve del *porqué*.
+- `npm run check`, `npm test` y `npm run test:e2e` pasan.
+- Cambios de interfaz: adjunta una captura de antes y después.
 
-By contributing you agree that your contribution is licensed under the [Apache License 2.0](LICENSE).
+Al contribuir aceptas que tu contribución se publique con la [licencia Apache 2.0](LICENSE).

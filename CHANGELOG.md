@@ -1,32 +1,32 @@
-# Changelog
+# Registro de cambios
 
-All notable changes to this project. The format follows [Keep a Changelog](https://keepachangelog.com/) and versions follow [Semantic Versioning](https://semver.org/).
+Todos los cambios importantes del proyecto. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/) y las versiones siguen [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [0.6.0] — 2026-11-15
 
-First public-ready release, named **vxtop** (formerly SIMULA).
+Primera versión lista para el público, ya con el nombre **vxtop** (antes SIMULA).
 
-### Added
-- Hover preview: live windows of the programs using a folder, images, videos and texts being touched, files open right now.
-- First-run welcome, with an opt-in for live images of your windows.
-- Clicking the read-only badge relaunches the server with administrator rights.
-- Smoke and end-to-end tests (`npm test`, `npm run test:e2e`), CI on Windows and Linux.
-- Apache-2.0 license, NOTICE, contributing and security guides, English and Spanish docs.
+### Añadido
+- Vista previa al pasar el cursor: ventanas en vivo de los programas que usan una carpeta, imágenes, vídeos y textos que se están tocando, y archivos abiertos en ese momento.
+- Bienvenida en el primer arranque, con la opción de permitir las imágenes en vivo de tus ventanas.
+- Al hacer clic en la insignia de solo lectura, el servidor se reinicia con permisos de administrador.
+- Pruebas rápidas y de extremo a extremo (`npm test`, `npm run test:e2e`) e integración continua en Windows y Linux.
+- Licencia Apache-2.0, NOTICE, guías de contribución y seguridad, y documentación en español e inglés.
 
-### Changed
-- Generic folder names show their parent (`AppData › Local`); Claude Code project folders show just the project.
-- System view: network lines stay faint until you point at a process or address.
-- About 350 lines of dead client code removed.
-- Starts without administrator rights.
-- Client split into ordered modules served as one bundle with a source map.
-- Live view shows only what is in use now (8 s), up to 24 activity groups.
-- One click selects, centres and opens; focus dims everything unrelated.
-- Programs are 27-cell cubes floating above the folders; no floor.
-- Code and comments in English.
+### Cambiado
+- Las carpetas con nombre genérico muestran su carpeta padre (`AppData › Local`); las carpetas de proyectos de Claude Code muestran solo el proyecto.
+- Vista Sistema: las líneas de red se quedan tenues hasta que señalas un proceso o una dirección.
+- Eliminadas unas 350 líneas de código muerto del cliente.
+- Arranca sin permisos de administrador.
+- El cliente se divide en módulos ordenados que se sirven como un solo paquete con *source map*.
+- La vista en vivo muestra solo lo que se usa ahora (8 s), con un máximo de 24 grupos de actividad.
+- Un clic selecciona, centra y abre; el foco atenúa todo lo que no tiene relación.
+- Los programas son cubos de 27 celdas que flotan sobre las carpetas; sin suelo.
+- Código y comentarios en inglés.
 
-### Fixed
-- The native Windows helper no longer exceeds the command-line length limit.
-- A habitual double click no longer cancels the camera framing.
+### Corregido
+- El ayudante nativo de Windows ya no supera el límite de longitud de la línea de comandos.
+- Un doble clic por costumbre ya no cancela el encuadre de la cámara.
 
-### Removed
-- Decorative particles, process bar cards, type chips, selection brackets and the Channels tab.
+### Eliminado
+- Partículas decorativas, tarjetas de la barra de procesos, etiquetas de tipo, corchetes de selección y la pestaña Canales.

@@ -1,20 +1,20 @@
 ---
-name: Bug report
-about: Something does not work as described
+name: Informar de un error
+about: Algo no funciona como se describe
 labels: bug
 ---
 
-**What happened**
+**Qué ha pasado**
 
-**What you expected**
+**Qué esperabas**
 
-**Steps to reproduce**
+**Pasos para reproducirlo**
 1.
 
-**Environment**
-- OS:
-- Node.js version (`node -v`):
-- Browser:
-- Started with: `vxtop.vbs` / `node server.js` / `npx`
+**Entorno**
+- Sistema operativo:
+- Versión de Node.js (`node -v`):
+- Navegador:
+- Cómo lo arrancaste: `vxtop.vbs` / `node server.js` / `npx`
 
-**Screenshot or log** (`%LOCALAPPDATA%\vxtop\servidor.log` on Windows)
+**Captura o log** (`%LOCALAPPDATA%\vxtop\servidor.log` en Windows)

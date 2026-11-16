@@ -1,20 +1,20 @@
-# Roadmap
+# Hoja de ruta
 
-Ideas and open work, roughly in order. Open an issue to discuss any of them.
+Ideas y trabajo pendiente, más o menos en orden. Abre una *issue* para hablar de cualquiera de ellas.
 
-## Next
-- **Release** — first public version (v0.6.0) on GitHub.
-- **Cube list** — keep the order stable while the live view changes.
-- **Toolbar** — group the unlabeled view buttons into a *View* menu.
-- **System view** — fewer overlapping labels around busy processes.
-- **Tasks view** — performance as cubes instead of bars; tighter framing.
+## Lo siguiente
+- **Lanzamiento**: primera versión pública (v0.6.0) en GitHub.
+- **Lista de cubos**: mantener el orden estable mientras cambia la vista en vivo.
+- **Barra de herramientas**: agrupar los botones de vista sin etiqueta en un menú *Vista*.
+- **Vista Sistema**: menos etiquetas solapadas alrededor de los procesos con mucha actividad.
+- **Vista Tareas**: rendimiento como cubos en vez de barras; encuadre más ajustado.
 
-## Later
-- **Data city** — the whole index as dense blocks, with AI activity flying between them as light.
-- **Portable Windows build** — a zip with Node included: double-click and go.
-- **More live signals** — per-app network and audio, clipboard and USB events (read-only).
-- **macOS** — test and fix the code paths that already exist.
+## Más adelante
+- **Ciudad de datos**: todo el índice como bloques densos, con la actividad de la IA volando entre ellos como luz.
+- **Versión portable para Windows**: un zip con Node incluido; doble clic y listo.
+- **Más señales en vivo**: red y audio por aplicación, portapapeles y eventos USB (de solo lectura).
+- **macOS**: probar y corregir las partes del código que ya existen.
 
-## Needs manual verification
-- Folder picker with real clicks; drag and drop from Explorer when the server runs as administrator.
-- Closing the window with an elevated server: every child process exits.
+## Falta verificar a mano
+- El selector de carpetas con clics reales; arrastrar y soltar desde el Explorador cuando el servidor funciona como administrador.
+- Cerrar la ventana con el servidor elevado: todos los procesos hijos terminan.

@@ -1,7 +1,7 @@
-**What and why**
+**Qué y por qué**
 
-**Checklist**
-- [ ] Still read-only: nothing is created, changed or deleted outside `~/.vxtop`
-- [ ] `npm run check`, `npm test` and `npm run test:e2e` pass
-- [ ] New files start with the SPDX header
-- [ ] Screenshot attached for UI changes
+**Comprobaciones**
+- [ ] Sigue siendo de solo lectura: no se crea, cambia ni borra nada fuera de `~/.vxtop`
+- [ ] `npm run check`, `npm test` y `npm run test:e2e` pasan
+- [ ] Los ficheros nuevos empiezan con la cabecera SPDX
+- [ ] Captura adjunta si hay cambios de interfaz

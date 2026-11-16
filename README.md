@@ -3,7 +3,7 @@
 
 **Un observatorio 3D de tu equipo, de solo lectura.** Cada carpeta es un cubo de 27 celdas, cada programa abierto otro cubo, y lo que se está usando *ahora mismo* se enciende y se mueve: lo que haces tú, lo que hacen otros programas o lo que hace un agente de IA como Claude Code.
 
-[Read in English](README.en.md) · [Guía completa](docs/guia.md) · [Arquitectura](docs/architecture.md)
+[Read in English](README.en.md) · [Guía completa](docs/guia.md) · [Arquitectura](docs/arquitectura.md)
 
 ![vxtop: carpetas y programas como cubos, en vivo](docs/assets/demo.gif)
 
@@ -89,7 +89,7 @@ npm run check        # comprobación de sintaxis
 npm run demo         # un estudio ficticio para probar o enseñar vxtop sin tus archivos
 ```
 
-El cliente es un único módulo ES repartido en ficheros ordenados (`public/js/NN-*.js`); el servidor los concatena con un *source map*, sin paso de compilación. Más en la [arquitectura](docs/architecture.md) y en [CONTRIBUTING.md](CONTRIBUTING.md).
+El cliente es un único módulo ES repartido en ficheros ordenados (`public/js/NN-*.js`); el servidor los concatena con un *source map*, sin paso de compilación. Más en la [arquitectura](docs/arquitectura.md) y en [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licencia
 

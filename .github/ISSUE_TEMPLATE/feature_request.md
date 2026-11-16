@@ -1,11 +1,11 @@
 ---
-name: Feature request
-about: An idea to make vxtop more useful
+name: Proponer una idea
+about: Una idea para que vxtop sea más útil
 labels: enhancement
 ---
 
-**What would you like to see or do?**
+**¿Qué te gustaría ver o hacer?**
 
-**Why does it matter to you?**
+**¿Por qué es importante para ti?**
 
-Remember: vxtop only observes. Ideas that change files, processes or the system are out of scope.
+Recuerda: vxtop solo observa. Las ideas que cambian archivos, procesos o el sistema quedan fuera de su alcance.

@@ -1,6 +1,6 @@
 # Guía de vxtop
 
-> [README](../README.md) · [English guide](en/guide.md) · [Arquitectura](architecture.md)
+> [README](../README.md) · [English guide](en/guide.md) · [Arquitectura](arquitectura.md)
 
 Observatorio 3D de directorios y del sistema. Cada directorio es un cubo OLAP de 27 celdas (tipo × profundidad × antigüedad) con 6 caras de métricas. Alrededor se ven los archivos, los procesos, la red y lo que hacen las sesiones de IA.
 
