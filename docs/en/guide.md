@@ -1,6 +1,6 @@
 # vxtop guide
 
-> [README](../../README.md) · [Guía en español](../guia.md) · [Architecture](../architecture.md)
+> [README](../../README.en.md) · [Guía en español](../guia.md) · [Architecture](../architecture.md)
 
 A 3D observatory of folders and of the system. Each folder is a 27-cell OLAP cube (type × depth × age) with 6 metric faces. Around it you can see the files, the processes, the network and what AI sessions are doing.
 
