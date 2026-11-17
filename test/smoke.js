@@ -33,6 +33,8 @@ const { makeFixture, startServer, reporter } = require('./helpers');
 
     const cube = await (await fetch(srv.url + 'api/cube?t=' + srv.token + '&path=' + encodeURIComponent(fx.dirs[0]))).json();
     t.ok('a folder is read as a 27-cell cube', Array.isArray(cube.cells) && cube.cells.length === 27, (cube.totals && cube.totals.files) + ' files');
+    const media = await (await fetch(srv.url + 'api/media?t=' + srv.token + '&path=' + encodeURIComponent(fx.dirs[0]))).json();
+    t.ok('the media gallery lists images in subfolders', Array.isArray(media.items) && media.items.some(x => x.k === 'image' && /pixel\.png$/.test(x.r) && x.s > 0), media.items && media.items.length + ' media');
     const net = await fetch(srv.url + 'api/cube?t=' + srv.token + '&path=' + encodeURIComponent('\\\\server\\share'));
     t.ok('network paths are blocked', !net.ok);
 

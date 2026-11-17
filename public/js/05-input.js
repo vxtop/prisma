@@ -98,6 +98,7 @@ addEventListener('keydown', e => {
   if (k === 'enter' && S.mode === 'obj' && OB.sel) return enterViewer(OB.sel);
   if (VIEW.cur !== 'espacio') return;
   if (k === 'e') toggleEx(); else if (k === 'f' && S.sel) { const c = S.sel, h = 1.6 * c.s * (1 + .9 * Math.max(c.ex, S.exploded ? 1 : OPEN_EX)); const r = fitPts([c.pos.clone().addScalar(h), c.pos.clone().subScalar(h)], .7); focusT.copy(c.pos); focusing = true; focusDir = r.dir; focusD = r.d; focusSel = true; }
+  else if (k === 'g' && S.sel && S.sel.data && S.sel.data.preset && S.sel.data.preset.media) openGallery(S.sel);
   else if (k === 'x' || k === 'y' || k === 'z') setSlice('xyz'.indexOf(k));
   else if (k === ' ') { e.preventDefault(); toggleFollow(); }
   else if (k === 'tab') { e.preventDefault(); const o = S.order; if (o.length) select(o[(o.indexOf(S.sel) + (e.shiftKey ? o.length - 1 : 1)) % o.length], true); }

@@ -2,6 +2,13 @@
 
 Todos los cambios importantes del proyecto. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/) y las versiones siguen [Semantic Versioning](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+- Galería de medios de un cubo (**G**, la ficha o el menú contextual): todas las imágenes, vídeos y audios de la carpeta y sus subcarpetas, con su árbol de carpetas, filtros por tipo y nombre, orden, secciones por carpeta, miniaturas de tamaño ajustable y navegación con teclado. Las miniaturas se hacen en el navegador y se guardan en su caché local (IndexedDB).
+- Visor: zoom hacia el cursor (rueda, pellizco, doble clic), arrastrar para desplazar, tamaño real 1:1, mapa para imágenes grandes, giro solo de la vista, fondo oscuro, claro o damero, tira de miniaturas, pase de diapositivas, pantalla completa y datos del archivo. Las imágenes vecinas se cargan por adelantado.
+- `GET /api/media?path=` lista los archivos de medios de una carpeta (solo nombres y datos, nunca el contenido).
+
 ## [0.6.0] — 2026-11-15
 
 Primera versión lista para el público, ya con el nombre **vxtop** (antes SIMULA).

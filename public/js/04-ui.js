@@ -80,7 +80,7 @@ function renderTab() {
       <span>Abierto por</span><b>${esc(c.by)}</b>
       <span>Escaneo</span><b>${d.scanMs} ms · hace ${ago(c.lastScan)}</b>
       <span>Índice</span><b>${d.indexed ? 'completo · ' + esc(base(d.indexed.root) || d.indexed.root) + ' · ' + ago(d.indexed.at) : d.indexing ? 'indexando ' + esc(base(d.indexing) || d.indexing) + '…' : 'no (no hace falta)'}</b></div>
-      ${d.preset ? `<h2 class="sub">Plantilla</h2>${d.preset.types.map(x => `<span class="pill">${esc(x[1])}</span>`).join('')}<div class="acts">${d.preset.keyFiles.length ? `<button id="pr-key">Abrir archivos clave (${d.preset.keyFiles.length})</button>` : ''}${d.preset.media ? `<button id="pr-med">Abrir galería</button>` : ''}</div>` : ''}
+      ${d.preset ? `<h2 class="sub">Plantilla</h2>${d.preset.types.map(x => `<span class="pill">${esc(x[1])}</span>`).join('')}<div class="acts">${d.preset.keyFiles.length ? `<button id="pr-key">Abrir archivos clave (${d.preset.keyFiles.length})</button>` : ''}${d.preset.media ? `<button id="pr-med">Abrir galería (${fmtN(d.preset.media)})</button>` : ''}</div>` : ''}
       <h2 class="sub">Composición por extensión</h2>
       ${d.exts.map(x => `<div class="extrow"><span>.${esc(x.ext)} ×${x.n}</span><div class="bar"><i style="width:${x.bytes / mx * 100}%"></i></div><span>${fmtB(x.bytes)}</span></div>`).join('')}
       <h2 class="sub">Marcadores</h2>${d.markers.map(m => `<span class="tag">${esc(m)}</span>`).join('') || '<span class="note">Ninguno</span>'}`;

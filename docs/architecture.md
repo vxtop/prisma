@@ -8,7 +8,7 @@ vxtop is a local web app: a Node.js server that **reads** the machine and a thre
 ┌──────────── browser (127.0.0.1) ────────────┐        ┌──────────────── server.js ────────────────┐
 │ public/index.html   markup                  │  GET   │ HTTP + SSE on 127.0.0.1, token-guarded     │
 │ public/css/app.css  styles                  │ ─────► │ /app.js   concatenated client + source map │
-│ /app.js  ← public/js/00-…18-*.js            │  SSE   │ /api/*    cubes, files, tree, procs, tasks │
+│ /app.js  ← public/js/00-…19-*.js            │  SSE   │ /api/*    cubes, files, tree, procs, tasks │
 │   one ES module, one shared scope           │ ◄───── │ /api/events  live stream (fs, procs, AI)   │
 │ three.js from public/vendor (import map)    │        │                                            │
 └─────────────────────────────────────────────┘        │  indexer.js   worker: whole-drive indexes  │
@@ -55,6 +55,7 @@ The client is **one ES module** split into ordered files that share a single sco
 | `16-tree` | the Tree view |
 | `17-peek` | hover preview |
 | `18-welcome` | first-run welcome and the admin relaunch |
+| `19-gallery` | a cube's media gallery and its lightbox (zoom, pan, navigator, filmstrip) |
 
 Rendering relies on `InstancedMesh`: all cells of all cubes are a few draw calls, which keeps 256 cubes (6 900 cells) above 150 fps on a mid-range GPU.
 

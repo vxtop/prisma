@@ -137,8 +137,7 @@ $('#b-scn').onclick = () => { const b = $('#scn'); if (b.style.display === 'bloc
 addEventListener('pointerdown', e => { if (!e.target.closest('#scn') && !e.target.closest('#b-scn')) $('#scn').style.display = 'none'; }, true);
 const presetOpen = (c, which) => { const d = c.data; if (!d || !d.preset) return;
   if (which === 'key') d.preset.keyFiles.forEach(f => openObject(joinP(c.path, f), false));
-  else { const media = []; d.cells.forEach(x => (x.top || []).forEach(f => { const e = (f.rel.match(/\.([^.\\/]+)$/) || [])[1]?.toLowerCase(); if (/^(png|jpe?g|gif|webp|avif|bmp|mp4|webm|mov|m4v|mp3|wav|ogg|flac|m4a)$/.test(e || '')) media.push(f); }));
-    media.sort((a, b) => b.mtime - a.mtime).slice(0, 8).forEach(f => openObject(joinP(c.path, f.rel), false)); } };
+  else openGallery(c); };
 
 // === 3D Models and PDF (local libraries, no CDN) ===
 let LIB3D = null;
@@ -194,7 +193,7 @@ async function loadPdf(o) {
 // === Help: Controls, Shortcuts, Legend ===
 const HELP = [['Arrastrar con el botón izquierdo', 'orbitar'], ['Arrastrar con el botón derecho', 'desplazar'], ['Rueda', 'acercar / alejar'], ['Clic', 'seleccionar'], ['Ctrl + clic en cubos', 'comparar varios'],
   ['Doble clic', 'enfocar · abrir en el visor'], ['Clic derecho', 'menú de opciones'], ['Mayús + arrastrar un cubo', 'moverlo']];
-const KEYS = [['H', 'encuadrar todo'], ['V', 'espacio ↔ sistema'], ['T', 'administrador de tareas'], ['Tab', 'siguiente cubo'], ['E', 'explotar el cubo'], ['X · Y · Z', 'cortes por eje'], ['1 – 4', 'disposición del espacio'], ['Espacio', 'seguir (IA o proceso)'], ['Esc', 'salir · limpiar'], ['?', 'esta ayuda']];
+const KEYS = [['H', 'encuadrar todo'], ['V', 'espacio ↔ sistema'], ['T', 'administrador de tareas'], ['Tab', 'siguiente cubo'], ['E', 'explotar el cubo'], ['G', 'galería de medios del cubo'], ['X · Y · Z', 'cortes por eje'], ['1 – 4', 'disposición del espacio'], ['Espacio', 'seguir (IA o proceso)'], ['Esc', 'salir · limpiar'], ['?', 'esta ayuda']];
 const LEGEND = [['#4fb3ad', 'Código y actividad de disco'], ['#6f8fb3', 'Datos'], ['#9a8f7a', 'Documentos y medios'], ['#e8a33d', 'IA: foco, lecturas y escrituras'], ['#8a9399', 'Lecturas de vxtop y accesos'], ['#ffffff', 'Selección']];
 $('#help').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:var(--t4)">Controles y leyenda</b><button class="ico" data-hc><svg class="i"><use href="#i-close"/></svg></button></div>
   <div class="cols"><div><h2>Ratón</h2>${HELP.map(([a, b]) => `<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')}<h2 class="sub">Colores</h2>${LEGEND.map(([c, t]) => `<div class="row"><span><i class="sw" style="background:${c}"></i>${t}</span></div>`).join('')}</div>

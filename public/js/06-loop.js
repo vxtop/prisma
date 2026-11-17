@@ -8,7 +8,7 @@ const clock = new THREE.Clock(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vec
 const selTrack = { c: null, p: new THREE.Vector3() }; let peekAcc = 0;
 let uiAcc = 0, fpsAcc = 0, fpsN = 0, slowT = 0, fastT = 0;
 function tick() {
-  requestAnimationFrame(tick);
+  requestAnimationFrame(tick); if (document.body.classList.contains('gal')) { clock.getDelta(); return; } // the media gallery covers the space: no 3D frames meanwhile
   const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime, now = Date.now(), kf = 1 - Math.pow(.0006, dt);
   handleMove();
   // the camera follows the selected cube when the layout moves it (new cubes, ring changes)

@@ -69,6 +69,9 @@ Herramientas: `vxtop_open`, `vxtop_close`, `vxtop_observe`, `vxtop_cube`, `vxtop
 - **Vista previa al pasar el cursor**: sobre un cubo de carpeta aparecen, en pequeño, las ventanas en vivo de los programas que la usan, las imágenes, vídeos y textos que se están tocando y los archivos que algún programa tiene abiertos ahora. Sobre un cubo de programa, su ventana en vivo y lo último que ha tocado. Al quitar el cursor, desaparece. Las miniaturas de ventana se hacen en local (PrintWindow, solo lectura) y no salen del equipo.
 - **Foco**: al seleccionar algo, lo que no tiene relación con ello se apaga y pierde su etiqueta.
 - **Plantillas**: cada carpeta se reconoce por su contenido (proyecto Node, Python, Rust o Go, repositorio git, trabajado con IA, medios, unidad). Según el tipo, se pueden abrir sus archivos clave o una galería de medios.
+- **Galería de medios** (tecla **G** con un cubo seleccionado, «Abrir galería» en la ficha o el menú contextual): todas las imágenes, vídeos y audios de la carpeta y sus subcarpetas. A la izquierda, el árbol de carpetas con sus totales; arriba, filtro por nombre (`/`), tipo, orden, secciones por carpeta (`G`), recorte cuadrado (`C`) y tamaño de miniaturas (`+`/`−`). Flechas para moverse, Intro para abrir.
+  - **Visor**: rueda para acercar hacia el cursor, arrastrar para desplazar, doble clic alterna entre ajustar y ampliar, `1` tamaño real, `0` ajustar, `R` girar (solo la vista), `B` fondo (oscuro, claro, damero), `I` información, `P` pase de diapositivas, `F` pantalla completa, `←`/`→` anterior y siguiente. En imágenes grandes aparece un mapa para saltar a cualquier zona; por encima de 250 % se ven los píxeles tal cual.
+  - Las miniaturas se hacen en el navegador y se guardan en su caché local; los archivos solo se leen.
 - **Escenas**: guardan lo abierto (cubos, objetos, cámara y espacio) con un nombre, para volver a ello.
 
 ## Cubo seleccionado

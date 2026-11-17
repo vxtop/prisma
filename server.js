@@ -626,6 +626,23 @@ function thumb(res, pIn) {
   ff.on('close', () => { if (res.headersSent) return; const b = Buffer.concat(chunks); if (!b.length) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=600' }); res.end(b); });
   setTimeout(() => ff.kill(), 15000).unref();
 }
+// every image, video and audio file under a folder, for the cube's media gallery (names and stats only, never the contents)
+const MEDIA_K = new Set(['image', 'video', 'audio']), mediaCache = new Map();
+async function mediaList(pIn) {
+  const root = await checkDir(pIn), k = key(root), hit = mediaCache.get(k); if (hit && Date.now() - hit.t < 8000) return hit.v;
+  const t0 = Date.now(), MAX = 50000, items = [], dirs = {}; let truncated = false, nd = 0; const queue = [''];
+  while (queue.length && !truncated) {
+    const rel = queue.shift(); let ents; try { ents = await fsp.readdir(path.join(root, rel), { withFileTypes: true }); } catch { continue; } nd++;
+    const files = [];
+    for (const e of ents) { if (e.isDirectory()) { if (!SKIP.has(e.name) && !e.name.startsWith('$')) queue.push(rel ? path.join(rel, e.name) : e.name); continue; }
+      if (!e.isFile()) continue; const kd = KMAP.get(extOf(e.name)); if (MEDIA_K.has(kd)) files.push([e.name, kd]); }
+    for (let i = 0; i < files.length; i += 64) await Promise.all(files.slice(i, i + 64).map(async ([n, kd]) => { const r = rel ? path.join(rel, n) : n;
+      try { const st = await fsp.stat(path.join(root, r)); items.push({ r, s: st.size, m: Math.round(st.mtimeMs), k: kd }); const d = rel || '.'; dirs[d] = (dirs[d] || 0) + 1; } catch {} }));
+    if (items.length >= MAX || Date.now() - t0 > 8000) truncated = true;
+  }
+  const v = { root, sep: path.sep, items: items.slice(0, MAX), dirs, folders: nd, truncated, ms: Date.now() - t0 };
+  if (mediaCache.size > 20) mediaCache.clear(); mediaCache.set(k, { t: Date.now(), v }); return v;
+}
 // network paths (\\server\share) are blocked: opening one would make Windows authenticate against another machine
 function safePath(pIn) { const s = String(pIn || '').trim(); if (/^[\\/]{2}/.test(s)) throw new Error('Rutas de red no permitidas'); if (!s || !path.isAbsolute(s)) throw new Error('Indica una ruta absoluta'); return path.resolve(s); } // without a path, never fall back to the server's own folder
 // real system icons (the one Windows shows for that executable or file type), batched and cached
@@ -1165,6 +1182,7 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/follow') return json(res, 200, await follow(q('pid')));
     if (u.pathname === '/api/scenes') return json(res, 200, await scenes());
     if (u.pathname === '/api/thumb') return thumb(res, q('path'));
+    if (u.pathname === '/api/media') return json(res, 200, await mediaList(q('path')));
     if (u.pathname === '/api/index') return json(res, 200, [...indexes.values()].map(ixPublic));
     if (u.pathname.startsWith('/vendor/')) {
       const f = path.join(__dirname, 'public', path.normalize(decodeURIComponent(u.pathname)).replace(/^[\\/]+/, ''));

@@ -69,6 +69,9 @@ Tools: `vxtop_open`, `vxtop_close`, `vxtop_observe`, `vxtop_cube`, `vxtop_refere
 - **Hover preview**: over a folder cube you see, in miniature, the live windows of the programs using it, the images, videos and texts being touched, and the files some program has open right now. Over a program cube, its live window and the last things it touched. Move the cursor away and it disappears. Window thumbnails are made locally (PrintWindow, read-only) and never leave the computer.
 - **Focus**: when you select something, whatever is unrelated to it dims and loses its label.
 - **Templates**: each folder is recognized by its contents (Node, Python, Rust or Go project, git repository, worked on with AI, media, drive). Depending on the type, you can open its key files or a media gallery.
+- **Media gallery** (**G** with a cube selected, "Open gallery" on the card or the context menu): every image, video and audio file in the folder and its subfolders. On the left, the folder tree with totals; on top, filter by name (`/`), type, sort order, sections per folder (`G`), square crop (`C`) and thumbnail size (`+`/`−`). Arrows to move, Enter to open.
+  - **Viewer**: wheel zooms toward the cursor, drag pans, double click toggles fit and zoom, `1` actual size, `0` fit, `R` rotate (view only), `B` background (dark, light, checkerboard), `I` details, `P` slideshow, `F` full screen, `←`/`→` previous and next. Large images show a navigator to jump anywhere; above 250 % pixels are shown as they are.
+  - Thumbnails are made in the browser and kept in its local cache; files are only read.
 - **Scenes**: save what is open (cubes, objects, camera and space) under a name, so you can come back to it.
 
 ## Selected cube
