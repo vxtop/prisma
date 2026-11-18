@@ -4,7 +4,7 @@
 // Spaces ("En vivo" and user spaces), folder drag-and-drop, cube levels, loading indicator,
 // and live processes shown as cubes in the "En vivo" room.
 // === Spaces: «En vivo» and User Spaces ===
-S.space = 'vivo'; S.spaces = []; S.enter = null;
+S.space = 'vivo'; S.spaces = []; S.enter = null; S.enterLP = null; // enterLP: the program whose case you are in
 function renderSpaces() { document.body.classList.toggle('vivo', S.space === 'vivo');
   $('#spaces').innerHTML = S.spaces.map(s => `<button class="spt ${s.id === S.space ? 'on' : ''}" data-sp="${esc(s.id)}" data-tip="${s.auto ? 'En vivo|Lo que se está usando ahora en el equipo: disco, IA, programas y descargas. Se actualiza solo.' : esc(s.name) + '|Espacio propio: lo que abras aquí se queda.'}">${s.auto ? '<i class="ldot"></i>' : ''}${esc(s.name)}<span>${s.n}</span>${s.auto ? '' : `<u data-x="${esc(s.id)}" data-tip="Cerrar este espacio">×</u>`}</button>`).join('')
     + `<button class="spt add" id="sp-add" data-tip="Nuevo espacio|Vacío, o con una foto fija de lo que hay ahora en vivo.">+</button>`;
@@ -49,7 +49,7 @@ addEventListener('drop', async e => {
     for (const p of files) await openObject(p, files.length === 1); }
   catch (er) { feed('error', '#C52235', er.message); }
 });
-function onSpaceChange() { S.peek = null; S.enter = null; S.sel = null; S.multi.clear(); OB.sel = null; S.mode = 'cube'; renderPanel(); S.focusRev = -2; setTimeout(fitAll, 1200); }
+function onSpaceChange() { S.peek = null; S.enter = null; S.enterLP = null; S.sel = null; S.multi.clear(); OB.sel = null; S.mode = 'cube'; renderPanel(); S.focusRev = -2; setTimeout(fitAll, 1200); }
 function renderEmpty() {
   const live = S.space === 'vivo', e = $('#empty');
   e.querySelector('b').textContent = live ? 'Escuchando el equipo…' : 'Este espacio está vacío';
@@ -69,6 +69,8 @@ async function enterCube(c) {
   feed('entra', GEM_HEX[c.gem || 'folder'][0], c.name + (dirs ? '' : ' · sin subcarpetas, ' + fmtN(nf) + ' archivos'));
 }
 function leaveLevel() {
+  if (S.enterLP) { S.enterLP = null; S.geoDirty = true; layout(); renderCubes(); const b = S.camBack; S.camBack = null; // out of a program: back to where the camera was
+    if (b) { focusT.copy(b.t); focusDir = b.p.clone().sub(b.t).normalize(); focusD = b.p.distanceTo(b.t); focusSel = false; focusing = true; } else setTimeout(fitAll, 350); return true; }
   if (!S.enter) return false; S.geoDirty = true; const c = S.cubes.get(S.enter); S.enter = c && c.parent && S.cubes.has(K(c.parent)) ? K(c.parent) : null;
   layout(); if (c) select(c, false);
   if (!S.enter && S.camBack) { const b = S.camBack; S.camBack = null; focusT.copy(b.t); focusDir = b.p.clone().sub(b.t).normalize(); focusD = b.p.distanceTo(b.t); focusSel = false; focusing = true; } else setTimeout(fitAll, 350); return true;
@@ -122,7 +124,7 @@ function syncLiveProcs(list) {
   for (const [id, o] of LP) if (!seen.has(id)) { o.dead = true; if (S.lpSel === o) { S.lpSel = null; if (S.mode === 'lp') { S.mode = 'cube'; renderPanel(); } } }
 }
 function stepLiveProcs(dt, t) {
-  const on = S.space === 'vivo' && VIEW.cur === 'espacio' && !VW.o && !S.enter; lpLines.visible = lpCells.visible = lpGlass.visible = on; if (!on) { lpFgRing.visible = false; lpCurRing.visible = false; fgScreen.visible = fgFrame.visible = false; }
+  const on = S.space === 'vivo' && VIEW.cur === 'espacio' && !VW.o && !S.enter && !S.enterLP; lpLines.visible = lpCells.visible = lpGlass.visible = on; if (!on) { lpFgRing.visible = false; lpCurRing.visible = false; fgScreen.visible = fgFrame.visible = false; }
   for (const [id, o] of LP) if (o.dead && o.h < .06) { scene.remove(o.icon); o.icon.material.dispose(); LP.delete(id); }
   for (const o of LP.values()) o.icon.visible = on; if (!on || !LP.size) { lpCells.count = 0; lpGlass.count = 0; return; }
   const river = S.layout === 'cluster' || S.layout === 'orbit', hub = v3.set(0, 0, 0); if (!river && S.vorder && S.vorder.length) { const b = new THREE.Box3(); S.vorder.forEach(c => b.expandByPoint(c.home)); b.getCenter(hub); hub.z = b.max.z + 9; hub.y = 0; }
@@ -152,7 +154,7 @@ function stepLiveProcs(dt, t) {
     lpFgRing.visible = !!f; if (f) { const E1 = f.h * 1.35; lpFgRing.position.set(f.base.x, LPB + E1 / 2, f.base.z); lpFgRing.quaternion.copy(camera.quaternion); lpFgRing.scale.setScalar(E1 * 1.05 + .35); } }
   lpGeo.setDrawRange(0, m * 2); lpGeo.attributes.position.needsUpdate = true; lpGeo.attributes.color.needsUpdate = true;
 }
-function pickLP(x, y) { if (S.space !== 'vivo' || VIEW.cur !== 'espacio' || S.enter || !lpCells.visible) return null; let best = null, bs = Infinity; const ph = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
+function pickLP(x, y) { if (S.space !== 'vivo' || VIEW.cur !== 'espacio' || S.enter || S.enterLP || !lpCells.visible) return null; let best = null, bs = Infinity; const ph = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
   // the program cube whose screen center is nearest the click, within its silhouette (foreground cube is larger)
   for (const o of LP.values()) { if (o.dead) continue; const E = o.h * (o.fg ? 1.35 : 1), [cx, cy, ok] = scr(v1.set(o.base.x, LPB + E / 2 + .02, o.base.z)); if (!ok) continue; const r = Math.max(10, E * .8 * ph / v1.distanceTo(camera.position)), d = Math.hypot(x - cx, y - cy) / r; if (d < 1 && d < bs) { bs = d; best = o; } }
   return best; }

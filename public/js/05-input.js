@@ -21,7 +21,7 @@ function pick(e) {
   if (VIEW.cur === 'arbol') { const n = trPick(); return n ? { tn: n } : null; }
   const oh = ray.intersectObjects(OB.list.map(o => o.mesh), false)[0], cb = pickCube();
   if (oh && (!cb || oh.distance * oh.distance < cb.d)) return { o: OB.list.find(o => o.mesh === oh.object) };
-  const fb = S.enter ? inPick() : null; if (fb && (!cb || fb.d < cb.d)) return { f: fb.f, d: fb.d }; // files inside the cube you are in
+  const fb = inside() ? inPick() : null; if (fb && (!cb || fb.d < cb.d)) return { f: fb.f, d: fb.d }; // files inside the cube you are in
   return cb;
 }
 canvas.addEventListener('pointerleave', () => { $('#tip').style.display = 'none'; setHover(null); });
@@ -52,8 +52,8 @@ canvas.addEventListener('pointerup', e => {
   if (!down || e.button !== 0 || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
   if (performance.now() - (S.selT || 0) < 450) return; S.selT = performance.now(); // a habitual double click does not deselect: the second click is ignored
   // a single click does everything: select, center and open or expand
-  const lp = pickLP(e.clientX, e.clientY); if (lp) { selectLP(lp); const c0 = new THREE.Vector3(lp.base.x, LPB + lp.h / 2, lp.base.z), lk = (lp.p.links || []).map(l => S.cubes.get(K(l))).filter(Boolean).slice(0, 4).map(c => c.pos.clone());
-    return focusOn([c0.clone().addScalar(2.5), c0.clone().subScalar(2.5), ...lk], .5, 10, false, c0); } // the program in the center, the folders it uses around it
+  const lp = pickLP(e.clientX, e.clientY); if (lp) return clickLater(() => { selectLP(lp); const c0 = new THREE.Vector3(lp.base.x, LPB + lp.h / 2, lp.base.z), lk = (lp.p.links || []).map(l => S.cubes.get(K(l))).filter(Boolean).slice(0, 4).map(c => c.pos.clone());
+    focusOn([c0.clone().addScalar(2.5), c0.clone().subScalar(2.5), ...lk], .5, 10, false, c0); }, () => inEnterProg(lp)); // click: the program in the center, the folders it uses around it; double click: inside it
   const m = pick(e); if (!m) return deselect();
   if (m.node) { const n = m.node.n; if (n.kind === 'group-root') { const k = String(n.pid); G.open.has(k) ? G.open.delete(k) : G.open.add(k); pollSystem(); } else if (n.kind === 'group') { G.openG.add(String(n.pid)); feed('despliega', '#8b95a3', n.name + ' ×' + n.count); pollSystem(); }
     selectNode(m.node); const nb = [m.node.pos.clone()]; for (const [a, b] of G.edges) { const o = a === m.node.id ? G.nodes.get(b) : b === m.node.id ? G.nodes.get(a) : null; if (o && nb.length < 12) nb.push(o.pos.clone()); }
@@ -90,7 +90,7 @@ canvas.addEventListener('contextmenu', e => {
 });
 addEventListener('keydown', e => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable || e.ctrlKey || e.metaKey || e.altKey) return; const k = e.key.toLowerCase();
-  if (k === 'escape') { hideMenu(); $('#tip').style.display = 'none'; toggleHelp(false); if (S.slice) return setSlice(null); if (S.multi.size) { S.multi.clear(); renderPanel(); renderCubes(); return; } if (VIEW.cur === 'espacio' && leaveLevel()) return; if (VIEW.cur === 'espacio' && !S.sel && !IN.sel && !OB.sel) toast('Estás en el nivel principal'); deselect(); return; }
+  if (k === 'escape') { hideMenu(); $('#tip').style.display = 'none'; toggleHelp(false); if (S.slice) return setSlice(null); if (S.multi.size) { S.multi.clear(); renderPanel(); renderCubes(); return; } if (VIEW.cur === 'espacio' && leaveLevel()) return; if (VIEW.cur === 'espacio' && !S.sel && !IN.sel && !OB.sel && !S.lpSel) toast('Estás en el nivel principal'); deselect(); return; }
   if (k === 'v') return setView(VIEW.cur === 'espacio' ? 'sistema' : 'espacio');
   if (k === 't') return setView(VIEW.cur === 'tareas' ? 'espacio' : 'tareas');
   if (k === 'a') return setView(VIEW.cur === 'arbol' ? 'espacio' : 'arbol');
@@ -105,6 +105,8 @@ addEventListener('keydown', e => {
   if (VIEW.cur !== 'espacio') return;
   if (k === 'f' && S.sel) { const c = S.sel, h = 1.6 * c.s * (1 + .9 * Math.max(c.ex, S.exploded ? 1 : OPEN_EX)); const r = fitPts([c.pos.clone().addScalar(h), c.pos.clone().subScalar(h)], .7); focusT.copy(c.pos); focusing = true; focusDir = r.dir; focusD = r.d; focusSel = true; }
   else if (k === 'n') toggleToday();
+  else if (k === 'o') inCycleSort();
+  else if (e.key === '/') { e.preventDefault(); inSearchOpen(); }
   else if (k === 'g' && S.sel && S.sel.data && S.sel.data.preset && S.sel.data.preset.media) openGallery(S.sel);
   else if (k === ' ') { e.preventDefault(); toggleFollow(); }
   else if (k === 'tab') { e.preventDefault(); const o = S.order; if (o.length) select(o[(o.indexOf(S.sel) + (e.shiftKey ? o.length - 1 : 1)) % o.length], true); }

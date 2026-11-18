@@ -51,6 +51,7 @@ function renderPanel() {
   if (VIEW.cur === 'arbol') { if (S.mode === 'tnode' && TR.sel) return renderTreePanel(); if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; }
   if (VIEW.cur === 'tareas') { if (S.mode === 'task' && TKS.sel) return renderTaskPanel(); if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; }
   if (VIEW.cur === 'sistema' && !(S.mode === 'proc' && G.sel)) { if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; }
+  if (S.mode === 'item' && IN.sel && VIEW.cur === 'espacio') return renderItemPanel(); if (S.mode === 'item') S.mode = 'cube';
   if (S.mode === 'obj' && OB.sel) return renderObjPanel(); if (S.mode === 'proc' && G.sel) return renderProcPanel(); if (S.mode === 'lp' && S.lpSel && VIEW.cur === 'espacio') return renderLpPanel(); S.mode = 'cube';
   const c = S.sel; if (!c) { if ($('#right').style.display !== 'none') { $('#right').style.display = 'none'; applyView(); } return; } if (S.multi.size < 2 && S.tab === 'cmp') S.tab = 'ficha'; $('#tabs').innerHTML = (S.multi.size > 1 ? [['cmp', 'Comparar'], ...TABS.cube] : TABS.cube).map(([k, l]) => '<button data-t="' + k + '">' + l + '</button>').join(''); $('#r-exp').style.display = ''; const was = $('#right').style.display; $('#right').style.display = 'flex'; if (was !== 'flex') applyView();
   $('#rn').textContent = c.name; $('#rp').innerHTML = '<span style="direction:ltr;unicode-bidi:isolate">' + esc(c.path) + '</span>';

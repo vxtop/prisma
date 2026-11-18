@@ -74,7 +74,20 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
       t.ok('levels: double click enters the cube', inn.enter === lc.key && inn.kids > 0, inn.kids + ' subfolders'); t.ok('levels: its files are cubes inside its case', inn.files > 0 && inn.shell > 1, inn.files + ' files · ' + inn.groups + ' clusters · case ' + (inn.shell || 0).toFixed(1)); await settle(800); await shot('02b-level');
       { const dir = await ev('window.__prisma.IN.path'); fs.writeFileSync(path.join(dir, 'nuevo.js'), '// nuevo\n'); fs.unlinkSync(path.join(dir, 'file0.js')); await sleep(3500);
         const live = await J(`{ born: window.__prisma.IN.files.some(f => /nuevo\\.js$/.test(f.path)), gone: !window.__prisma.IN.files.some(f => /file0\\.js$/.test(f.path) && !f.dead), traces: (window.__prisma.TRACES.get(window.__prisma.IN.path.toLowerCase()) || []).length }`);
-        t.ok('levels: a new file is born inside and a deleted one leaves a trace', live.born && live.gone && live.traces === 1, JSON.stringify(live)); await shot('02c-live-changes'); }
+        t.ok('levels: a new file is born inside and a deleted one leaves a trace', live.born && live.gone && live.traces === 1, JSON.stringify(live)); await shot('02c-live-changes');
+        // a file cube: one click opens its card with a preview in the panel
+        const fc = await J(`(() => { const f = window.__prisma.IN.files.find(f => !f.dead && !f.hidden && /file1\\.js$/.test(f.path)); if (!f) return null; const a = window.__h.scr(f.p); return { x: a[0], y: a[1] }; })()`);
+        if (fc) { await click(fc.x, fc.y); await sleep(1800); const card = await J(`{ mode: window.__prisma.mode, pv: !!document.querySelector('#it-pv pre, #it-pv img'), name: document.querySelector('#rn').textContent }`);
+          t.ok('levels: a click on a file shows its card with a preview', card.mode === 'item' && card.pv && /file1\.js/.test(card.name), JSON.stringify(card)); } else t.ok('levels: a file cube is visible', false);
+        // sort and search inside
+        await key('o', 'KeyO'); await sleep(300); const so = await ev('window.__prisma.IN.sort');
+        await key('/', 'Slash'); await sleep(200); await cdp('Input.insertText', { text: 'file1' }); await sleep(500);
+        const q = await J(`{ q: window.__prisma.IN.q, open: document.querySelector('#insearch').classList.contains('on') }`); await key('Escape', 'Escape'); await sleep(200);
+        t.ok('levels: O sorts and / searches inside the case', so === 'date' && q.q === 'file1' && q.open && await ev('window.__prisma.IN.q') === '' && await ev('window.__prisma.enter') != null, so + ' · ' + JSON.stringify(q));
+        // a crowd: past 110 files a cluster gathers the rest in a summary cube
+        for (let k = 0; k < 130; k++) fs.writeFileSync(path.join(dir, `bulk${k}.js`), '//');
+        await sleep(5000); const sm = await J(`(() => { const s = window.__prisma.IN.files.find(f => f.summary && !f.hidden); return s ? { n: s.n, shown: window.__prisma.IN.files.filter(f => f.grp === s.grp && !f.hidden && !f.summary && !f.dead).length } : null; })()`);
+        t.ok('levels: a crowded cluster gathers the rest in a summary cube', sm && sm.n > 0 && sm.shown === 109, JSON.stringify(sm)); await shot('02d-crowd'); }
       await key('Escape', 'Escape'); await sleep(600); const up = await ev('window.__prisma.enter'); await key('Escape', 'Escape'); await sleep(400); const up2 = await ev('window.__prisma.enter');
       t.ok('levels: Esc climbs back and stops at the top', up == null && up2 == null); }
 
@@ -97,7 +110,12 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
     // ---- live space: a program cube is selectable ----
     if (LIVE) { await key('Escape', 'Escape'); await ev("fetch('/api/space', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Prisma': document.querySelector('meta[name=prisma]').content }, body: JSON.stringify({ action: 'switch', id: 'vivo' }) }).then(r => r.ok)"); await sleep(2500); await key('h', 'KeyH'); await sleep(3500); await shot('04-live'); // programs live in «En vivo», which is no longer the space the app opens on
       const p = await J(`(() => { const S = window.__prisma, C = S.camera.position.constructor; for (const o of S.LP.values()) { if (o.dead) continue; const a = window.__h.scr(new C(o.base.x, 3.2 + o.h / 2, o.base.z)); if (a[2] && a[0] > 340 && a[0] < 1250 && a[1] > 140 && a[1] < 780) return { id: o.id, x: a[0], y: a[1] }; } return null; })()`);
-      if (p) { await click(p.x, p.y); await sleep(2200); const r5 = await J(`{ mode: window.__prisma.mode, lp: window.__prisma.lpSel && window.__prisma.lpSel.id }`); t.ok('live: program cube selected', r5.mode === 'lp' && r5.lp === p.id, JSON.stringify(r5) + ' · under ' + await ev('window.__prisma.pickAt(' + p.x + ',' + p.y + ')')); await shot('04-live'); } else t.ok('live: a program is visible', false); }
+      if (p) { await click(p.x, p.y); await sleep(2200); const r5 = await J(`{ mode: window.__prisma.mode, lp: window.__prisma.lpSel && window.__prisma.lpSel.id }`); t.ok('live: program cube selected', r5.mode === 'lp' && r5.lp === p.id, JSON.stringify(r5) + ' · under ' + await ev('window.__prisma.pickAt(' + p.x + ',' + p.y + ')')); await shot('04-live');
+        // inside a program: its processes (and connections, folders, modules) as cubes; Esc comes back out
+        await ev(`window.__prisma.inEnterProg(window.__prisma.LP.get(${JSON.stringify(p.id)}))`); await sleep(5000);
+        const ip = await J(`{ mode: window.__prisma.IN.mode, procs: window.__prisma.IN.files.filter(f => f.grp === 'proc').length, groups: window.__prisma.IN.groups.map(g => g.g) }`); await shot('04b-program-inside');
+        await key('Escape', 'Escape'); await sleep(800); const outLP = await ev('window.__prisma.enterLP');
+        t.ok('live: a program opens into its processes and Esc comes back out', ip.mode === 'prog' && ip.procs > 0 && outLP == null, JSON.stringify(ip)); } else t.ok('live: a program is visible', false); }
 
     // ---- fast view switching (V, T, A toggle with the space) ----
     for (const k of ['v', 't', 'a', 'v', 'a', 't', 'v']) { await key(k, 'Key' + k.toUpperCase()); await sleep(120); } await sleep(3000);

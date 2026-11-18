@@ -322,3 +322,5 @@ audio.lmed { top:auto; bottom:18%; width:min(560px, 80%); }
 #toast { position:fixed; left:50%; top:104px; z-index:30; transform:translate(-50%, -6px); padding:8px 16px; border-radius:18px; background:var(--panel); border:1px solid var(--line2); color:var(--tx); font:var(--t3) var(--ui); box-shadow:0 10px 30px rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; }
 #toast.on { opacity:1; transform:translate(-50%, 0); }
 @media (prefers-reduced-motion:reduce) { #toast { transition:none; } }
+#insearch { position:fixed; left:50%; top:104px; z-index:31; transform:translateX(-50%); width:min(420px, calc(100vw - 32px)); height:36px; padding:0 16px; border-radius:18px; background:var(--panel); border:1px solid var(--line2); color:var(--tx); font:var(--t3) var(--ui); outline:0; box-shadow:0 10px 30px rgba(0,0,0,.45); display:none; }
+#insearch.on { display:block; } #insearch:focus { border-color:var(--c); }

@@ -5,7 +5,7 @@
 // scenes, local 3D/PDF loaders, tooltips, help, breadcrumb and multi-select.
 // === Side Panel: Cube / Object / Process ===
 S.mode = 'cube'; S.tabs = { obj: 'vista', proc: 'proc' };
-const TABS = { tnode: [['info', 'Carpeta']], cube: [['ficha', 'Ficha'], ['props', 'Datos'], ['celda', 'Celdas'], ['act', 'Actividad'], ['procs', 'Procesos']], obj: [['vista', 'Vista'], ['props', 'Datos'], ['rel', 'Relaciones']], proc: [['proc', 'Proceso'], ['seguir', 'Seguir'], ['mem', 'Memoria'], ['arbol', 'Árbol'], ['red', 'Red']] };
+const TABS = { item: [['ficha', 'Ficha']], tnode: [['info', 'Carpeta']], cube: [['ficha', 'Ficha'], ['props', 'Datos'], ['celda', 'Celdas'], ['act', 'Actividad'], ['procs', 'Procesos']], obj: [['vista', 'Vista'], ['props', 'Datos'], ['rel', 'Relaciones']], proc: [['proc', 'Proceso'], ['seguir', 'Seguir'], ['mem', 'Memoria'], ['arbol', 'Árbol'], ['red', 'Red']] };
 function panelFrame(mode, name, path, cur) {
   const was = $('#right').style.display; $('#right').style.display = 'flex'; if (was !== 'flex') applyView();
   $('#rn').textContent = name; $('#rp').innerHTML = '<span style="direction:ltr;unicode-bidi:isolate">' + esc(path) + '</span>';
@@ -192,8 +192,8 @@ async function loadPdf(o) {
 
 // === Help: Controls, Shortcuts, Legend ===
 const HELP = [['Arrastrar con el botón izquierdo', 'orbitar'], ['Arrastrar con el botón derecho', 'desplazar'], ['Rueda', 'acercar / alejar'], ['Clic', 'seleccionar'], ['Ctrl + clic en cubos', 'comparar varios'],
-  ['Doble clic en un cubo', 'entrar: sus subcarpetas y archivos, cada uno un cubo'], ['Doble clic en un archivo', 'abrir en el visor'], ['Clic derecho', 'menú de opciones'], ['Mayús + arrastrar un cubo', 'moverlo']];
-const KEYS = [['H', 'encuadrar todo'], ['V', 'espacio ↔ sistema'], ['T', 'administrador de tareas'], ['Tab', 'siguiente cubo'], ['G', 'galería de medios del cubo'], ['N', 'novedades de hoy (dentro de una carpeta)'], ['1 – 4', 'disposición del espacio'], ['Espacio', 'seguir (IA o proceso)'], ['Esc', 'subir un nivel · salir · limpiar'], ['?', 'esta ayuda']];
+  ['Doble clic en un cubo', 'entrar: sus subcarpetas y archivos, cada uno un cubo'], ['Doble clic en un archivo', 'abrir en el visor'], ['Doble clic en un programa', 'entrar: procesos, red, carpetas, módulos'], ['Clic derecho', 'menú de opciones'], ['Mayús + arrastrar un cubo', 'moverlo']];
+const KEYS = [['H', 'encuadrar todo'], ['V', 'espacio ↔ sistema'], ['T', 'administrador de tareas'], ['Tab', 'siguiente cubo'], ['G', 'galería de medios del cubo'], ['N', 'novedades de hoy (dentro de una carpeta)'], ['O', 'ordenar dentro: tamaño, fecha, nombre'], ['/', 'buscar dentro'], ['1 – 4', 'disposición del espacio'], ['Espacio', 'seguir (IA o proceso)'], ['Esc', 'subir un nivel · salir · limpiar'], ['?', 'esta ayuda']];
 const LEGEND = [[GEM_HEX.code[0], 'Zafiro · código'], [GEM_HEX.data[0], 'Esmeralda · datos'], [GEM_HEX.docs[0], 'Oro · documentos y medios'], [GEM_HEX.folder[0], 'Plata · carpetas'], [GEM_HEX.exe[0], 'Rubí · ejecutables'], ['#D97757', 'IA: foco, lecturas y escrituras'], ['#8b95a3', 'Lecturas de Prisma y accesos'], ['#ffffff', 'Selección']];
 $('#help').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:var(--t4)">Controles y leyenda</b><button class="ico" data-hc><svg class="i"><use href="#i-close"/></svg></button></div>
   <div class="cols"><div><h2>Ratón</h2>${HELP.map(([a, b]) => `<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')}<h2 class="sub">Colores</h2>${LEGEND.map(([c, t]) => `<div class="row"><span><i class="sw" style="background:${c}"></i>${t}</span></div>`).join('')}</div>

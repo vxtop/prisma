@@ -83,7 +83,7 @@ function fitAll() {
   const pts = []; if (VIEW.cur === 'arbol') { for (const n of TR.list) pts.push(n.tgt.clone().addScalar(n.ts), n.tgt.clone().subScalar(n.ts)); }
   else if (VIEW.cur === 'sistema') { for (const nd of G.nodes.values()) pts.push(nd.tgt); }
   else if (VIEW.cur === 'tareas') { for (const z of TKS.zones) pts.push(new THREE.Vector3(z.c.x - ZW / 2, 0, z.c.z - ZD / 2), new THREE.Vector3(z.c.x + ZW / 2, 5, z.c.z + ZD / 2)); }
-  else if (S.enter && inFrame()) pts.push(...inFrame());
+  else if (inside() && inFrame()) pts.push(...inFrame());
   else { for (const c of S.cubes.values()) { const p = (c.manual || (c.rel ? c.pos : c.home)).clone().add(c.off); pts.push(p.clone().addScalar(1.6 * c.tScale), p.clone().subScalar(1.6 * c.tScale)); } OB.list.forEach(o => pts.push(o.pos)); }
   if (!pts.length) return; const { ctr: c0, d, dir } = fitPts(pts); const sph = { center: c0 };
   if (d * 1.4 > 420 || VIEW.cur === 'arbol') { controls.maxDistance = Math.max(420, d * 1.4); camera.far = Math.max(700, d * 2.6); camera.updateProjectionMatrix(); } // a large tree needs more distance than the Space view

@@ -74,12 +74,12 @@ function layoutCore(resetManual) {
   const kidsOf = (list, c) => list.filter(x => x.parent && K(x.parent) === c.key).sort((a, b) => a.seq - b.seq); // arrival order, so nothing jumps when data loads
   const full = [], walkF = (c, d) => { c.depth = d; full.push(c); kidsOf(allC, c).forEach(x => walkF(x, d + 1)); }; allC.filter(c => !c.parent || !S.cubes.has(K(c.parent))).forEach(c => walkF(c, 0));
   if (S.enter && !S.cubes.has(S.enter)) S.enter = null;
-  for (const c of allC) c.vis = S.enter ? (c.key === S.enter || (!!c.parent && K(c.parent) === S.enter)) : (!c.parent || !S.cubes.has(K(c.parent)) || S.layout === 'stack');
+  for (const c of allC) c.vis = S.enterLP ? false : S.enter ? (c.key === S.enter || (!!c.parent && K(c.parent) === S.enter)) : (!c.parent || !S.cubes.has(K(c.parent)) || S.layout === 'stack');
   const all = allC.filter(c => c.vis), kids = c => kidsOf(all, c), cores = all.filter(c => !c.parent || !all.some(o => o.key === K(c.parent))), order = [];
   const walk = (c, d) => { c.vdepth = d; order.push(c); kids(c).forEach(x => walk(x, d + 1)); }; cores.forEach(c => walk(c, 0));
   S.order = full; S.vorder = order; S.cores = cores; const mode = S.layout;
   if (resetManual) order.forEach(c => c.manual = null);
-  if (S.enter) return inLayout(all); // inside a cube: its contents on a grid within its glass case
+  if (S.enter || S.enterLP) return inLayout(all); // inside a cube or a program: its contents on a grid within its glass case
   if (mode === 'grid') {
     const n = order.length, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols), sp = 5.4;
     order.forEach((c, i) => { c.rel = null; c.tScale = c.vdepth ? .7 : 1; c.home.set((i % cols - (cols - 1) / 2) * sp, 0, ((i / cols | 0) - (rows - 1) / 2) * sp); }); return;
@@ -140,7 +140,7 @@ function syncGhosts(mem) {
 }
 // Personal space and gravity: each cube occupies its real volume (larger when open or exploded). Overlapping cubes are pushed apart horizontally, heavier ones move less; the selected, dragged or hand-placed cube stays put. Gravity eases them back when there is room.
 function spaceBodies(dt) {
-  if (S.enter) { for (const c of S.cubes.values()) c.off.multiplyScalar(.8); return; } // inside a cube the grid already keeps everything apart
+  if (inside()) { for (const c of S.cubes.values()) c.off.multiplyScalar(.8); return; } // inside a cube the grid already keeps everything apart
   const B = [], decay = Math.pow(.8, dt), soft = Math.min(1, dt * 6);
   for (const c of S.vorder || []) { if (c.vis === false || c.s < .1 || c.leaving) continue; const ex = 1 + .9 * c.ex;
     B.push({ o: c, r: 1.5 * c.s * ex, h: 1.46 * c.s * ex, y: c.pos.y, m: c === S.sel || c === drag || c.manual ? Infinity : Math.pow(c.s * ex, 3) }); }
