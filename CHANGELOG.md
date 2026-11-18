@@ -8,6 +8,8 @@ Todos los cambios importantes del proyecto. El formato sigue [Keep a Changelog](
 - Prompt bar to talk to Claude through the installed Claude Code (CLI or Claude Desktop), with every logged-in account, observe and work modes, transcript replay and draft persistence.
 - Cube inside cube: every folder is one solid cube (no longer 27 cells). A double click turns it into a glass case of its gem with each subfolder and each file inside as a cube of its own (files coloured by kind and sized by weight); a double click on a subfolder goes deeper, on a file opens the viewer, and Esc climbs back one level at a time, stopping at the top. Contents rise out of the cube and sink back into it.
 - Programs in «En vivo» are glass cases holding one small cube per process (edge: memory; the processes brighten and breathe with the CPU). In the System view each process is one cube.
+- Deleted files leave a ruby outline in their place for five minutes; **N** inside a folder shows only what was created or changed today.
+- Tasks view: programs are cubes (edge: memory) and each service is a glass cube holding its process when it runs.
 - Inside a case the contents are grouped in labelled clusters: subfolders, code, data, documents and media, executables, biggest first.
 - Live changes: what is created is born with an emerald flash, what is deleted turns ruby, drops and fades, what changes pulses, both inside the case and on the whole body of a closed cube.
 - Finish: every cube has thin lit edges in its own colour, files are more polished than folders, heavier folders are bigger, and top-level cubes sit next to others of the same gem.
