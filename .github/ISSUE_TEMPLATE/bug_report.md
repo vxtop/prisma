@@ -15,6 +15,6 @@ labels: bug
 - Sistema operativo:
 - Versión de Node.js (`node -v`):
 - Navegador:
-- Cómo lo arrancaste: `vxtop.vbs` / `node server.js` / `npx`
+- Cómo lo arrancaste: `prisma.vbs` / `node server.js` / `npx`
 
-**Captura o log** (`%LOCALAPPDATA%\vxtop\servidor.log` en Windows)
+**Captura o log** (`%LOCALAPPDATA%\prisma\servidor.log` en Windows)

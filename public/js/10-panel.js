@@ -27,7 +27,7 @@ function renderObjPanel() {
       h += `<pre id="pvt" class="code">${ls.slice(off, off + n).map((l, k) => `<i>${String(off + k + 1).padStart(4)}</i> ${esc(l.slice(0, 160))}`).join('\n')}</pre><div class="note">${off + 1}–${Math.min(ls.length, off + n)} de ${i.lines} líneas · rueda para desplazar</div>`; }
     else if (i.hex) h += `<pre class="code">${(i.hex.match(/.{1,24}/g) || []).slice(0, 16).map((r, k) => `<i>${(k * 12).toString(16).padStart(4, '0')}</i> ${r.match(/../g).join(' ')}`).join('\n')}</pre><div class="note">${esc(i.magic || 'formato desconocido')}</div>`;
     el.innerHTML = `<div class="pvbox">${h}</div><div class="note" style="margin-top:6px">${esc(i.dims || '')}</div>`;
-    const w = $('#pvw'); if (w && o.wave) { const g = w.getContext('2d'), N = o.wave.length; g.fillStyle = '#a98bc9'; for (let k = 0; k < N; k++) { const hh = o.wave[k] * 70; g.fillRect(k * 700 / N, 80 - hh, Math.max(1, 700 / N - .5), hh * 2); } }
+    const w = $('#pvw'); if (w && o.wave) { const g = w.getContext('2d'), N = o.wave.length; g.fillStyle = '#E6B844'; for (let k = 0; k < N; k++) { const hh = o.wave[k] * 70; g.fillRect(k * 700 / N, 80 - hh, Math.max(1, 700 / N - .5), hh * 2); } }
     $('#ob-view').onclick = () => enterViewer(o);
     const pre = $('#pvt'); if (pre) pre.onwheel = e => { e.preventDefault(); o.scroll = Math.max(0, o.scroll + Math.sign(e.deltaY) * 6); renderObjPanel(); };
   } else if (t === 'props') {
@@ -74,7 +74,7 @@ function renderProcPanel() {
       <h2 class="sub">Conexiones establecidas (${est.length})</h2><div class="list">${est.slice(0, 16).map(([x, c]) => `<div><span>${esc(c.host && c.host !== 'local' ? c.host : c.rip)}:${c.rport}</span><span>${esc(nodeName(x))} · :${c.lport}</span></div>`).join('') || '<div class="note">Sin conexiones.</div>'}</div>
       ${n.kind === 'claude' ? (() => { const reqs = [...S.sessions.values()].filter(s => s.meta && (!n.account || s.meta.account === n.account)).flatMap(s => s.meta.trace).filter(e => /^(WebFetch|WebSearch)$/.test(e.tool)).slice(-10).reverse();
         return `<h2 class="sub" style="color:var(--ai)">Peticiones web de la IA (${reqs.length})</h2><div class="list">${reqs.map(e => `<div><span>${esc(e.tool === 'WebSearch' ? 'busca ' + e.target : e.target)}</span><span>${ago(e.t)}</span></div>`).join('') || '<div class="note">Ninguna en esta sesión.</div>'}</div>`; })() : ''}
-      <div class="note" style="margin-top:8px">Conexiones TCP vistas por el sistema, con el dominio cuando se conoce. El contenido de las peticiones va cifrado: verlo exigiría un proxy que descifre TLS, que vxtop no instala.</div>`;
+      <div class="note" style="margin-top:8px">Conexiones TCP vistas por el sistema, con el dominio cuando se conoce. El contenido de las peticiones va cifrado: verlo exigiría un proxy que descifre TLS, que Prisma no instala.</div>`;
   }
 }
 
@@ -84,7 +84,7 @@ const fmtC = n => n >= 1e6 ? (n / 1e6).toFixed(2) + ' M' : n >= 1e3 ? (n / 1e3).
 function onIndex(m) {
   const prev = S.idx.get(K(m.root)); S.idx.set(K(m.root), m);
   if (m.state === 'done' && (!prev || prev.state !== 'done')) {
-    feed('índice', '#4fb3ad', `${base(m.root) || m.root} · ${fmtC(m.files)} archivos · ${fmtB(m.bytes)} · ${(m.ms / 1000).toFixed(0)} s`);
+    feed('índice', '#1768B5', `${base(m.root) || m.root} · ${fmtC(m.files)} archivos · ${fmtB(m.bytes)} · ${(m.ms / 1000).toFixed(0)} s`);
     const inRoot = p => trimSep(K(p)) === trimSep(K(m.root)) || under(K(p), K(m.root));
     for (const c of S.cubes.values()) if (inRoot(c.path)) scanCube(c);
     if (EX.data && inRoot(EX.data.path)) exGo(EX.data.path);
@@ -95,10 +95,10 @@ function renderIndexLine() {
   const run = [...S.idx.values()].filter(x => x.state === 'running'), el = $('#L3b'); if (!el) return;
   if (run.length) { const x = run[0]; el.innerHTML = `<span style="color:var(--c)">indexando</span> ${esc(base(x.root) || x.root)} · ${fmtC(x.files)} · ${fmtB(x.bytes)} · ${((x.ms || 0) / 1000).toFixed(0)} s`; el.title = x.cur || ''; }
 }
-const startIx = p => post('/api/index', { path: p }).then(() => feed('índice', '#4fb3ad', 'indexando ' + p)).catch(e => feed('error', '#d9534f', e.message));
+const startIx = p => post('/api/index', { path: p }).then(() => feed('índice', '#1768B5', 'indexando ' + p)).catch(e => feed('error', '#C52235', e.message));
 api('/api/index').then(l => l.forEach(onIndex)).catch(() => {});
 
-$('#empty').onclick = e => { const q = e.target.closest('[data-p]'); if (q) return post('/api/open', { path: q.dataset.p, depth: 1 }).catch(er => feed('error', '#d9534f', er.message)); if (e.target.closest('[data-e]')) setLeft('explorer'); };
+$('#empty').onclick = e => { const q = e.target.closest('[data-p]'); if (q) return post('/api/open', { path: q.dataset.p, depth: 1 }).catch(er => feed('error', '#C52235', er.message)); if (e.target.closest('[data-e]')) setLeft('explorer'); };
 apiT('/api/roots').then(r => { EX.roots = r; $('#emptyq').innerHTML = r.slice(0, 7).map(x => `<button data-p="${esc(x.path)}">${esc(x.name)}</button>`).join(''); }).catch(() => {});
 
 // === Confirm Dialog (no browser dialogs) ===
@@ -122,16 +122,16 @@ async function openScenes() {
   const names = Object.keys(all).sort((a, b) => all[b].at - all[a].at);
   box.innerHTML = `<h2>Escenas</h2><div class="note" style="margin-bottom:8px">Guardan lo abierto (cubos, objetos, cámara y espacio) para volver a ello.</div>
     <div style="display:flex;gap:6px;margin-bottom:10px"><input id="scn-n" placeholder="Nombre de la escena" style="flex:1;width:auto"><button id="scn-s">Guardar</button></div>
-    <div class="list">${names.map(n => `<div><span data-a="${esc(n)}" style="cursor:pointer;color:#eef1f3">${esc(n)}</span><span>${(all[n].cubes || []).length} cubos · ${ago(all[n].at)} <u data-d="${esc(n)}" style="cursor:pointer;text-decoration:none;color:var(--bad);margin-left:6px">✕</u></span></div>`).join('') || '<div class="note">Todavía no hay escenas.</div>'}</div>`;
+    <div class="list">${names.map(n => `<div><span data-a="${esc(n)}" style="cursor:pointer;color:#F0EBDD">${esc(n)}</span><span>${(all[n].cubes || []).length} cubos · ${ago(all[n].at)} <u data-d="${esc(n)}" style="cursor:pointer;text-decoration:none;color:var(--bad);margin-left:6px">✕</u></span></div>`).join('') || '<div class="note">Todavía no hay escenas.</div>'}</div>`;
   box.style.display = 'block'; $('#scn-n').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('#scn-s').click(); });
   $('#scn-s').onclick = async () => { const name = $('#scn-n').value.trim(); if (!name) return $('#scn-n').focus();
     const data = { objs: OB.list.map(o => o.path), cam: { p: camera.position.toArray(), t: controls.target.toArray() }, view: VIEW.cur, exploded: S.exploded };
-    try { await post('/api/scene', { action: 'save', name, data }); feed('escena', '#4fb3ad', 'guardada ' + name); openScenes(); } catch (e) { feed('error', '#d9534f', e.message); } };
+    try { await post('/api/scene', { action: 'save', name, data }); feed('escena', '#1768B5', 'guardada ' + name); openScenes(); } catch (e) { feed('error', '#C52235', e.message); } };
   box.onclick = async e => { const a = e.target.closest('[data-a]'), d = e.target.closest('[data-d]');
     if (d) { if (await confirmBox('Borrar escena', `Se borra la escena «${esc(d.dataset.d)}». Los archivos no se tocan.`, 'Borrar', true)) { await post('/api/scene', { action: 'delete', name: d.dataset.d }).catch(() => {}); openScenes(); } return; }
     if (a) { try { const sc = await post('/api/scene', { action: 'apply', name: a.dataset.a }); box.style.display = 'none'; [...OB.list].forEach(closeObj);
       if (sc.view && sc.view !== VIEW.cur) setView(sc.view); S.exploded = !!sc.exploded; renderTop();
-      setTimeout(async () => { for (const p of sc.objs || []) await openObject(p, false); if (sc.cam) { camera.position.fromArray(sc.cam.p); controls.target.fromArray(sc.cam.t); focusing = false; } }, 900); } catch (er) { feed('error', '#d9534f', er.message); } } };
+      setTimeout(async () => { for (const p of sc.objs || []) await openObject(p, false); if (sc.cam) { camera.position.fromArray(sc.cam.p); controls.target.fromArray(sc.cam.t); focusing = false; } }, 900); } catch (er) { feed('error', '#C52235', er.message); } } };
 }
 $('#b-scn').onclick = () => { const b = $('#scn'); if (b.style.display === 'block') b.style.display = 'none'; else openScenes(); };
 addEventListener('pointerdown', e => { if (!e.target.closest('#scn') && !e.target.closest('#b-scn')) $('#scn').style.display = 'none'; }, true);
@@ -192,13 +192,13 @@ async function loadPdf(o) {
 
 // === Help: Controls, Shortcuts, Legend ===
 const HELP = [['Arrastrar con el botón izquierdo', 'orbitar'], ['Arrastrar con el botón derecho', 'desplazar'], ['Rueda', 'acercar / alejar'], ['Clic', 'seleccionar'], ['Ctrl + clic en cubos', 'comparar varios'],
-  ['Doble clic', 'enfocar · abrir en el visor'], ['Clic derecho', 'menú de opciones'], ['Mayús + arrastrar un cubo', 'moverlo']];
-const KEYS = [['H', 'encuadrar todo'], ['V', 'espacio ↔ sistema'], ['T', 'administrador de tareas'], ['Tab', 'siguiente cubo'], ['E', 'explotar el cubo'], ['G', 'galería de medios del cubo'], ['X · Y · Z', 'cortes por eje'], ['1 – 4', 'disposición del espacio'], ['Espacio', 'seguir (IA o proceso)'], ['Esc', 'salir · limpiar'], ['?', 'esta ayuda']];
-const LEGEND = [['#4fb3ad', 'Código y actividad de disco'], ['#6f8fb3', 'Datos'], ['#9a8f7a', 'Documentos y medios'], ['#e8a33d', 'IA: foco, lecturas y escrituras'], ['#8a9399', 'Lecturas de vxtop y accesos'], ['#ffffff', 'Selección']];
+  ['Doble clic en un cubo', 'entrar: sus subcarpetas y archivos, cada uno un cubo'], ['Doble clic en un archivo', 'abrir en el visor'], ['Clic derecho', 'menú de opciones'], ['Mayús + arrastrar un cubo', 'moverlo']];
+const KEYS = [['H', 'encuadrar todo'], ['V', 'espacio ↔ sistema'], ['T', 'administrador de tareas'], ['Tab', 'siguiente cubo'], ['G', 'galería de medios del cubo'], ['N', 'novedades de hoy (dentro de una carpeta)'], ['1 – 4', 'disposición del espacio'], ['Espacio', 'seguir (IA o proceso)'], ['Esc', 'subir un nivel · salir · limpiar'], ['?', 'esta ayuda']];
+const LEGEND = [[GEM_HEX.code[0], 'Zafiro · código'], [GEM_HEX.data[0], 'Esmeralda · datos'], [GEM_HEX.docs[0], 'Oro · documentos y medios'], [GEM_HEX.folder[0], 'Plata · carpetas'], [GEM_HEX.exe[0], 'Rubí · ejecutables'], ['#D97757', 'IA: foco, lecturas y escrituras'], ['#8b95a3', 'Lecturas de Prisma y accesos'], ['#ffffff', 'Selección']];
 $('#help').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:var(--t4)">Controles y leyenda</b><button class="ico" data-hc><svg class="i"><use href="#i-close"/></svg></button></div>
   <div class="cols"><div><h2>Ratón</h2>${HELP.map(([a, b]) => `<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')}<h2 class="sub">Colores</h2>${LEGEND.map(([c, t]) => `<div class="row"><span><i class="sw" style="background:${c}"></i>${t}</span></div>`).join('')}</div>
   <div><h2>Teclado</h2>${KEYS.map(([a, b]) => `<div class="row"><span><kbd>${a}</kbd></span><span>${b}</span></div>`).join('')}<h2 class="sub">El cubo</h2><div class="note" style="line-height:1.6">27 celdas = tipo (X: código · datos · documentos) × profundidad (Y: raíz · niveles 1–2 · 3+) × antigüedad (Z: &lt;24 h · &lt;30 d · histórico). Cada ventanita es un archivo reciente.</div></div></div>
-  <p class="hint" style="margin:14px 0 0">vxtop solo observa: no modifica archivos ni actúa sobre procesos.</p>`;
+  <p class="hint" style="margin:14px 0 0">Prisma solo observa: no modifica archivos ni actúa sobre procesos.</p>`;
 const toggleHelp = v => { const h = $('#help'); h.style.display = (v ?? h.style.display !== 'block') ? 'block' : 'none'; };
 $('#b-help').onclick = () => toggleHelp(); $('#help').addEventListener('click', e => { if (e.target.closest('[data-hc]')) toggleHelp(false); });
 addEventListener('pointerdown', e => { if (!e.target.closest('#help') && !e.target.closest('#b-help')) $('#help').style.display = 'none'; }, true);
@@ -229,7 +229,7 @@ function renderCompare(el) {
   const B = c => c.data.totals.bytes, Fl = c => c.data.totals.files, now = Date.now();
   el.innerHTML = `<div class="note" style="margin-bottom:10px">Ctrl + clic en otro cubo para añadir o quitar. Esc para salir.</div>
     <h2>Tamaño</h2><div class="cmp">${cs.map(c => `<span>${esc(c.name)}</span><b class="num">${fmtB(B(c))}</b><span class="hint">${(B(c) / cs.reduce((s, x) => s + B(x), 0) * 100).toFixed(0)} %</span><div class="bar"><i style="width:${B(c) / mx(B) * 100}%"></i></div>`).join('')}</div>
-    <h2 class="sub">Archivos</h2><div class="cmp">${cs.map(c => `<span>${esc(c.name)}</span><b class="num">${fmtN(Fl(c))}</b><span class="hint">${fmtN(c.data.totals.dirs)} carp.</span><div class="bar" style="--k:#6f8fb3"><i style="width:${Fl(c) / mx(Fl) * 100}%"></i></div>`).join('')}</div>
+    <h2 class="sub">Archivos</h2><div class="cmp">${cs.map(c => `<span>${esc(c.name)}</span><b class="num">${fmtN(Fl(c))}</b><span class="hint">${fmtN(c.data.totals.dirs)} carp.</span><div class="bar" style="--k:#269B65"><i style="width:${Fl(c) / mx(Fl) * 100}%"></i></div>`).join('')}</div>
     <h2 class="sub">Actividad</h2><div class="list">${cs.map(c => `<div><span>${esc(c.name)}</span><span>${c.data.newest ? 'último cambio ' + ago(c.data.newest) : '—'}${now - c.aiHot < 600000 ? ' · IA' : ''}</span></div>`).join('')}</div>`;
 }
 

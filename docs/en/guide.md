@@ -1,10 +1,10 @@
-# vxtop guide
+# Prisma guide
 
 > [README](../../README.en.md) · [Guía en español](../guia.md) · [Architecture](../architecture.md)
 
-A 3D observatory of folders and of the system. Each folder is a 27-cell OLAP cube (type × depth × age) with 6 metric faces. Around it you can see the files, the processes, the network and what AI sessions are doing.
+A 3D observatory of folders and of the system. Each folder is a cube of a single gem, and inside it every subfolder and every file is a cube of its own. Its data is aggregated into 27 cells (type × depth × age), in the «Celdas» (cells) tab. Around it you can see the files, the processes, the network and what AI sessions are doing.
 
-**Read-only**: it is a monitor. It never creates, modifies or deletes anything it observes, and it does not act on processes or on the system. It only writes to its own folder `~/.vxtop` (indexes, scenes and the MCP token).
+**Read-only**: it is a monitor. It never creates, modifies or deletes anything it observes, and it does not act on processes or on the system. It only writes to its own folder `~/.prisma` (indexes, scenes and the MCP token).
 
 Side effects caused by the operating system itself when reading: Windows updates the last-access time of files that are read, and downloads OneDrive files that were cloud-only.
 
@@ -16,16 +16,16 @@ It works offline and with no npm dependencies: all libraries are bundled in `pub
 - Optional: an NVIDIA GPU (telemetry via `nvidia-smi`) and `ffmpeg` (frames from videos the browser can't play).
 
 ## Starting on Windows (recommended)
-Double-click **vxtop.vbs**. It starts the server **without any console window** and without asking for administrator rights, logging to `%LOCALAPPDATA%\vxtop\servidor.log`, and opens vxtop in its own Chrome window, with no toolbars and a separate profile (`%LOCALAPPDATA%\vxtop\chrome`). On first run, a welcome screen explains the basics and asks whether you want to see live images of your windows (off unless you say yes; you can change it in **Ajustes** (settings)).
+Double-click **prisma.vbs**. It starts the server **without any console window** and without asking for administrator rights, logging to `%LOCALAPPDATA%\prisma\servidor.log`, and opens prisma in its own Chrome window, with no toolbars and a separate profile (`%LOCALAPPDATA%\prisma\chrome`). On first run, a welcome screen explains the basics and asks whether you want to see live images of your windows (off unless you say yes; you can change it in **Ajustes** (settings)).
 
 **More data with administrator rights**: one click on the «SOLO LECTURA» (read-only) badge restarts the server with administrator rights (Windows asks for confirmation) so it can also see the DNS cache and the files each process has open. It is still read-only; the badge changes to «SOLO LECTURA · ADMIN».
 
-Closing the vxtop window shuts everything down within about 10 s: the server, its PowerShell helper and the Chrome instance using its profile (`--with-window`; the grace period lets you reload the page). If the code changes while it is open, the page tells you to close and reopen it. To debug with a console: run `node server.js` in the project folder.
+Closing the prisma window shuts everything down within about 10 s: the server, its PowerShell helper and the Chrome instance using its profile (`--with-window`; the grace period lets you reload the page). If the code changes while it is open, the page tells you to close and reopen it. To debug with a console: run `node server.js` in the project folder.
 
 ## Several cubes at once
 - **+ → Varios cubos…** (several cubes): the Windows folder picker with multiple selection (Ctrl/Shift). It creates a new space; the cubes arrive one by one and take their places in the ring, and when it finishes everything is framed.
 - **Search box** (top bar): type a name to list the folders that contain it (from the indexes, instantly), or start typing a path to autocomplete it. Use the arrows to choose, Enter opens it as a cube, Shift+Enter opens it with subfolders; in the Tree view it opens that root. Several paths separated by `;` open at once.
-- **Drag and drop** from File Explorer onto the Space: folders → cubes (in the current space; from «En vivo» (live), in a new one), files → objects. The browser does not hand over paths, so vxtop looks up each item by its name and content: what is selected in open Explorer windows, the folders they show, common folders, drives, what is already open, recent items and the indexes. If it can't find something, it says so in the ticker.
+- **Drag and drop** from File Explorer onto the Space: folders → cubes (in the current space; from «En vivo» (live), in a new one), files → objects. The browser does not hand over paths, so prisma looks up each item by its name and content: what is selected in open Explorer windows, the folders they show, common folders, drives, what is already open, recent items and the indexes. If it can't find something, it says so in the ticker.
 
 ## Cube types
 Each cube carries an emblem on its lid and a line in its type's color on its label: ◉ drive · ✦ worked on with AI · `</>` code project · ▶ media · ⚙ system · ▣ program data · ◷ temporary or cache · ↓ downloads · ★ home folder. No cube ever overlaps another, not even an exploded one: the lighter one moves aside and, once there is room, everything returns to its place.
@@ -39,25 +39,26 @@ Each cube carries an emblem on its lid and a line in its type's color on its lab
 
 ## Usage
 ```
-node server.js [directorio ...] [--expand] [--port 4827] [--no-open]
+node server.js [directorio ...] [--expand] [--port 4828] [--no-open]
 ```
 - With no folder it opens the current one. `--expand` also unfolds its subfolders as cubes.
-- To install it as a command: `npm install -g .` inside this folder, then `vxtop C:\ruta\proyecto --expand`.
+- To install it as a command: `npm install -g .` inside this folder, then `prisma C:\ruta\proyecto --expand`.
 - It only listens on `127.0.0.1`. Every request requires a token that only the page itself receives. Network paths (`\\servidor\...`) are blocked.
 
 ## For an AI (MCP)
 ```
-claude mcp add vxtop -- node "<ruta>/mcp.js"
+claude mcp add prisma -- node "<ruta>/mcp.js"
 ```
-Tools: `vxtop_open`, `vxtop_close`, `vxtop_observe`, `vxtop_cube`, `vxtop_references`, `vxtop_pulse`, `vxtop_ls`, `vxtop_file`, `vxtop_system`, `vxtop_tasks`, `vxtop_meta`, `vxtop_index`, `vxtop_layout` and `vxtop_focus`. The MCP reads the token from `~/.vxtop/token` and starts vxtop if it is not running.
+Tools: `prisma_open`, `prisma_close`, `prisma_observe`, `prisma_cube`, `prisma_references`, `prisma_pulse`, `prisma_ls`, `prisma_file`, `prisma_system`, `prisma_tasks`, `prisma_meta`, `prisma_index`, `prisma_layout` and `prisma_focus`. The MCP reads the token from `~/.prisma/token` and starts prisma if it is not running.
 
 ## Spaces
-- **En vivo** (live; the default when vxtop opens): only what is being used **right now** on the computer, not what happened before. A folder appears when something touches it (disk activity on all drives, what AIs touch, the paths of open programs, downloads from the last 2 min) and fades out after 8 s without activity, with the countdown «se apaga · N s» (turning off · N s). Items are grouped by project root or by program (up to 24 focal points; the user folder and a drive root don't count as projects). Whatever you have selected doesn't fade while you're looking at it.
-  - **programs**: they float in a layer above, each as a 27-cell cube: its size is its memory, the lit cells (bottom to top) its CPU, and its real icon sits on top. Amber halo: the program in front of you, with its live screen above it; teal halo: the one under your cursor.
+- **En vivo** (live; the default when prisma opens): only what is being used **right now** on the computer, not what happened before. A folder appears when something touches it (disk activity on all drives, what AIs touch, the paths of open programs, downloads from the last 2 min) and fades out after 8 s without activity, with the countdown «se apaga · N s» (turning off · N s). Items are grouped by project root or by program (up to 24 focal points; the user folder and a drive root don't count as projects). Whatever you have selected doesn't fade while you're looking at it.
+  - **programs**: they float in a layer above, each as a glass case with one cube per process inside: its size is its memory and the processes brighten with the CPU, and its real icon sits on top. Amber halo: the program in front of you, with its live screen above it; teal halo: the one under your cursor.
   - **«ahora» bar** (now; at the top): the foreground program, its window title and what is under the cursor.
   - No floor: folders and programs float. The camera never moves on its own except to follow what you have selected.
 - **+**: creates a space of your own, empty or with a snapshot of «En vivo». Opening a specific folder from «En vivo» creates its own space.
-- **Levels**: only the main cubes are shown. One click selects, centers and opens (its subfolders appear); a second click on the same cube picks the cell. `Esc` goes up a level and clicking empty space deselects. As you get closer, the cube opens into its 27 cells and, in «En vivo», unfolds its active subfolders around it.
+- **Levels**: every folder shows as a single cube. One click selects and centers it. A **double click** goes inside: the cube turns into a glass case of its colour and everything it holds appears inside, each thing as a cube (subfolders at the bottom, files above, most recent first, sized by their weight). A double click on a subfolder goes one level deeper; on a file, it opens it in the viewer. `Esc` climbs back one level at a time up to the top, where it stops. Inside, everything is grouped in labelled blocks: folders, code, data, documents and media, executables. What is created is born with an emerald flash, what is deleted turns ruby, drops and fades, and what changes pulses. An empty folder is not entered: a notice says so. Click and double click never overlap: a click waits a moment in case a second one follows.
+- **Colours**: each cube is a single gem chosen by what it holds: sapphire code, emerald data, gold documents and media, silver folders (or empty), ruby executables. Windows, activity and the shimmer cross the cube in that same colour.
 - **Layouts** (`1–4`): room or cluster, stack (subfolders in towers above their cube, heaviest at the bottom), grid and orbit.
 
 ## What you see
@@ -75,7 +76,7 @@ Tools: `vxtop_open`, `vxtop_close`, `vxtop_observe`, `vxtop_cube`, `vxtop_refere
 - **Scenes**: save what is open (cubes, objects, camera and space) under a name, so you can come back to it.
 
 ## Selected cube
-The 27 cells separate and each shows its file count and size; whatever is unrelated dims. On the right, the **Ficha** (details) tab with collapsible sections (empty ones are hidden): contents, activity, size, status (git, index), declared dependencies (npm, pip, pyproject, Cargo, go), git history (latest commits), network of the processes using it, files open right now and who has them, and AI and links (sessions, internal references).
+It is centered and whatever is unrelated dims. On the right, the **Ficha** (details) tab with collapsible sections (empty ones are hidden): contents, activity, size, status (git, index), declared dependencies (npm, pip, pyproject, Cargo, go), git history (latest commits), network of the processes using it, files open right now and who has them, and AI and links (sessions, internal references).
 
 ## Explorer, objects and system
 - **Explorer**: drives, folders and files with the system icon and the real size of folders (if indexed). Right-click a folder: open it as a cube, with 1–4 levels of subfolders, or view it as a tree.
@@ -94,17 +95,17 @@ The 27 cells separate and each shows its file count and size; whatever is unrela
 
   For each process you see its memory, threads and loaded modules (on Linux, open files too).
 - **Tasks view** (key T): the task manager in 3D, read-only. Eleven sections, including scheduled tasks and failures from the last 7 days, plus: apps, background and Windows processes (grouped by program, with their icon), per-core performance, network by remote host, files in use, services, startup programs and users.
-- **Live ticker**: distinguishes written, created, deleted and **access** (read). It attributes each change to the **AI**, to **vxtop** (its own reads) or to the process that had the file open.
-- **Index**: for huge trees such as all of `C:\` (about 6 M files in about 3.5 min). It is stored in `~/.vxtop/index`, updated with every change and rebuilt in the background when new folders appear or 12 h have passed.
+- **Live ticker**: distinguishes written, created, deleted and **access** (read). It attributes each change to the **AI**, to **prisma** (its own reads) or to the process that had the file open.
+- **Index**: for huge trees such as all of `C:\` (about 6 M files in about 3.5 min). It is stored in `~/.prisma/index`, updated with every change and rebuilt in the background when new folders appear or 12 h have passed.
 
 ## Controls
-- **Mouse** (standard 3D): left-drag orbits, right-drag pans, and the wheel zooms in and out toward the center (in **Ajustes** (settings) you can make it zoom toward the cursor). A single click does everything: selects, centers and opens or expands (there is no double-click; a habitual one doesn't undo anything). Ctrl + click compares several cubes and right-click opens the menu. Hovering over a cube shows what is being used in it.
-- **Keyboard**: `H` frame everything (fills the free space between panels) · `F` frame the selected cube · arrows pan (Shift: faster) · `+`/`−` zoom in and out · `V` space ↔ system · `T` tasks · `A` tree · `Tab` next cube · `E` explode · `X/Y/Z` slices · `1–4` layout · `Espacio` (Space) follow · `Esc` exit · `?` help.
+- **Mouse** (standard 3D): left-drag orbits, right-drag pans, and the wheel zooms in and out toward the center (in **Ajustes** (settings) you can make it zoom toward the cursor). A click selects and centers; a double click on a cube goes inside it and `Esc` climbs back up. Ctrl + click compares several cubes and right-click opens the menu. Hovering over a cube shows what is being used in it.
+- **Keyboard**: `H` frame everything (fills the free space between panels) · `F` frame the selected cube · arrows pan (Shift: faster) · `+`/`−` zoom in and out · `V` space ↔ system · `T` tasks · `A` tree · `Tab` next cube · `1–4` layout · `Espacio` (Space) follow · `Esc` exit · `?` help.
 - **Viewer**: a file opens inside the space. The camera moves up to it and everything else dims. It has pages (PDF), lines (code and tables), playback (video and audio) and free orbit (3D models). `Esc` returns to the space.
 - **Follow**: with the AI, the camera goes to the exact spot (the slot of the file it is touching) or frames all active sessions; the folder containing what it is editing opens as its own cube and closes by itself after 20 s unused. A panel shows what it is doing now, its latest actions and what is open, so you can follow along. It tracks the AI or the selected process live and records on a timeline what it launches, loads, opens and connects to. It only observes.
 
 ## Known limitations
-- **Content of network requests**: not visible, because it is encrypted. Seeing it would require a TLS-decrypting proxy, and vxtop does not install one.
+- **Content of network requests**: not visible, because it is encrypted. Seeing it would require a TLS-decrypting proxy, and prisma does not install one.
 - **On Windows without administrator rights**:
   - the DNS cache and the list of files opened by a process are not accessible;
   - it is still possible to tell which process has a specific file open.

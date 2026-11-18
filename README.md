@@ -1,96 +1,63 @@
-<p align="center"><img src="docs/assets/logo.svg" alt="vxtop" width="236"></p>
+<p align="center"><img src="docs/assets/logo.svg" alt="" width="96"></p>
 
+# Prisma
 
-**Un observatorio 3D de tu equipo, de solo lectura.** Cada carpeta es un cubo de 27 celdas, cada programa abierto otro cubo, y lo que se está usando *ahora mismo* se enciende y se mueve: lo que haces tú, lo que hacen otros programas o lo que hace un agente de IA como Claude Code.
+**A 3D interface for Claude on your own computer.** You talk to Claude in a dark space; every folder is a cube,
+every program floats above them, and whatever Claude looks at or changes lights up in front of you.
 
-[Read in English](README.en.md) · [Guía completa](docs/guia.md) · [Arquitectura](docs/arquitectura.md)
+Prisma is built on [vxtop](https://github.com/vxtop/vxtop) by virtuanista (see [NOTICE](NOTICE)).
 
-![vxtop: carpetas y programas como cubos, en vivo](docs/assets/demo.gif)
+## What it does
 
-| Carpeta seleccionada | Vista Árbol |
-|---|---|
-| ![](docs/assets/selected.png) | ![](docs/assets/tree.png) |
+- **Talk to Claude from the space.** The prompt bar uses the Claude Code you already have installed and logged in
+  (standalone or the copy Claude Desktop downloads), with every account on the machine. No API keys, no login screen.
+- **Observe mode** (default): Claude can only look. It inspects folders, files, processes and AI sessions through a
+  read-only MCP server and shows its answer by opening cubes, focusing them and arranging spaces.
+- **Work mode**: Claude can edit files inside the folder of the selected cube, never outside it, and never runs
+  programs.
+- **Live view**: folders light up when something touches them; particles show who touched each file — Claude in its
+  own colour, you in pearl, other programs in silver.
+- **Systems, tasks, tree, gallery and viewers** inherited from vxtop, all read-only.
 
-## Para qué
+## Colour language
 
-Un explorador de archivos enseña *dónde* están las cosas. vxtop enseña *qué está pasando*: qué carpetas se escriben, qué programa las toca, qué lee o edita un agente de IA, y cuánto pesa y qué antigüedad tiene todo, de un vistazo, en un espacio que se gira, se acerca y se pulsa.
+Colours name kinds of things and never change meaning:
 
-Solo **observa**. Nunca crea, cambia ni borra nada de lo que mira y nunca actúa sobre procesos ni sobre el sistema.
+| Gem | Hex | Meaning |
+|---|---|---|
+| Sapphire | `#1768B5` | Code |
+| Emerald | `#269B65` | Data |
+| Gold | `#E6B844` | Documents and media |
+| Silver | `#AEB9C5` | Folders, drives, other programs |
+| Ruby | `#C52235` | Executables, deletions and errors |
+| Onyx | `#252B35` | Surfaces: matte graphene cubes and panels |
+| Pearl | `#F0EBDD` | Text and your own activity |
 
-## Lo principal
+Claude keeps its own colour (`#D97757`).
 
-- **Carpetas como cubos de datos**: 27 celdas, tipo de archivo × profundidad × antigüedad.
-- **En vivo**: solo lo que se usa ahora. Una carpeta aparece cuando algo la toca y se apaga a los 8 s sin actividad. Cada punto que viaja es un archivo tocado de verdad, en ámbar si es Claude, turquesa si eres tú y gris azulado si es otro programa.
-- **Programas como cubos**: el tamaño es la memoria, las celdas encendidas la CPU, con su icono real. El que tienes delante lleva un halo ámbar.
-- **Vista previa al pasar el cursor**: las ventanas de los programas que usan esa carpeta y las imágenes, vídeos y textos que se están tocando.
-- **Sigue a la IA**: qué leen, buscan y escriben las sesiones de Claude Code, archivo a archivo.
-- **Cinco vistas**: Espacio, Sistema (procesos y red), Tareas (un administrador de tareas en 3D), Árbol (como `tree`, cada carpeta un cubo) y un visor de archivos.
-- **Índices de unidades enteras**: millones de archivos, al día en segundo plano.
-- **Servidor MCP** para que una IA abra y observe carpetas.
-- **Sin dependencias y sin conexión**: Node.js y three.js incluido. Nada sale de tu equipo.
+## Requirements
 
-## Empezar
+- Node.js 18.15 or later (no npm dependencies)
+- Chrome or Edge
+- Claude Code installed and logged in, for the assistant
+- Windows is the most complete platform; Linux works; macOS is untested
 
-Necesitas [Node.js](https://nodejs.org) 18.15 o superior y Chrome o Edge. Windows es la plataforma más completa; Linux funciona; macOS no está probado.
+## Run
 
-```bash
-npx github:vxtop/vxtop                 # vista en vivo de todo el equipo
-npx github:vxtop/vxtop C:\codigo\proyecto --expand
+```sh
+node server.js           # http://127.0.0.1:4828/
+npm run dev              # same, with hot reload of the interface and safe server restarts
 ```
 
-O clónalo:
+On Windows, double-click `prisma.vbs` for a window of its own.
 
-```bash
-git clone https://github.com/vxtop/vxtop.git
-cd vxtop
-node server.js            # abre http://127.0.0.1:4827/
-```
+Data lives in `~/.prisma` (indexes, scenes, token, assistant sessions). Prisma never shares it with vxtop.
 
-En Windows, doble clic en **`vxtop.vbs`**: ventana propia, sin consola, y al cerrarla se cierra todo.
+## Documentation
 
-| Opción | |
-|---|---|
-| `[carpeta ...]` | abre esas carpetas como cubos (por defecto: vista en vivo) |
-| `--expand` | abre también sus subcarpetas |
-| `--port 4827` | puerto en el que escucha (solo 127.0.0.1) |
-| `--no-open` | no abre el navegador |
-| `--no-live` | sin vista en vivo (no vigila las unidades) |
+- [Assistant](docs/assistant.md): installations, accounts, isolation, work mode, hot reload
+- [Architecture](docs/architecture.md) · [Guía (es)](docs/guia.md) · [Guide (en)](docs/en/guide.md)
 
-**Controles:** un clic selecciona, centra y abre · el cursor encima muestra lo que se usa ahí · arrastrar gira, clic derecho y arrastrar desplaza, la rueda acerca · `H` encuadrar · `V` Sistema · `T` Tareas · `A` Árbol · `?` ayuda.
+## License
 
-¿Quieres probarlo sin enseñar tus archivos? `npm run demo` abre un estudio ficticio (proyectos, fotos, documentos).
-
-Todo lo demás está en la [guía](docs/guia.md).
-
-## Para agentes de IA (MCP)
-
-```bash
-claude mcp add vxtop -- node /ruta/a/vxtop/mcp.js
-```
-
-Entre sus herramientas están `vxtop_open`, `vxtop_observe`, `vxtop_cube`, `vxtop_file`, `vxtop_system` y `vxtop_focus`. Más detalles en la [guía](docs/guia.md#para-una-ia-mcp).
-
-## Privacidad y seguridad
-
-- Solo escucha en `127.0.0.1`, cada consulta lleva un token de sesión y se rechazan las peticiones de otros orígenes.
-- Solo lectura: la única carpeta en la que escribe es la suya (`~/.vxtop`).
-- Las imágenes en vivo de tus ventanas están **desactivadas** hasta que las permites y nunca salen del equipo.
-- Arranca sin administrador. Un clic en la insignia «SOLO LECTURA» lo reinicia con administrador (Windows pide confirmación) para ver la caché DNS y los archivos abiertos por proceso.
-- Efectos del propio sistema operativo: leer un archivo actualiza su fecha de último acceso, y OneDrive descarga los archivos que solo estaban en la nube si se leen.
-
-Más en [SECURITY.md](SECURITY.md).
-
-## Desarrollo
-
-```bash
-npm test             # prueba rápida, sin navegador
-npm run test:e2e     # prueba de interacción en Chrome sin interfaz
-npm run check        # comprobación de sintaxis
-npm run demo         # un estudio ficticio para probar o enseñar vxtop sin tus archivos
-```
-
-El cliente es un único módulo ES repartido en ficheros ordenados (`public/js/NN-*.js`); el servidor los concatena con un *source map*, sin paso de compilación. Más en la [arquitectura](docs/arquitectura.md) y en [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Licencia
-
-[Apache 2.0](LICENSE) © 2026 virtuanista. Puedes usar, modificar y compartir vxtop, también con fines comerciales, siempre que conserves el aviso de autoría y el archivo [NOTICE](NOTICE) (es decir, que des crédito al autor) e indiques qué has cambiado.
+[Apache-2.0](LICENSE). Keep [NOTICE](NOTICE) when redistributing.

@@ -16,14 +16,14 @@ function drawHi(o) { // high-resolution text texture for reading in the viewer
     const show = [rows[0], ...rows.slice(1 + o.scroll, 1 + o.scroll + nl)]; g.font = '18px "Cascadia Mono",Consolas,monospace';
     show.forEach((r, k) => { if (!k) { g.fillStyle = rgba(col, .16); g.fillRect(28, top, W - 56, lh); } for (let c = 0; c < cols; c++) { g.fillStyle = k ? 'rgba(230,234,237,.9)' : col; g.fillText(String(r[c] ?? '').slice(0, Math.floor(cw / 11) - 1), 36 + c * cw, top + 24 + k * lh); } g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(28, top + lh + k * lh, W - 56, 1); }); }
   else if (i.json) { const lh = 32, nl = Math.floor((H - top - 20) / lh); o.vlines = i.json.length; o.vpage = nl; g.font = '19px "Cascadia Mono",Consolas,monospace';
-    i.json.slice(o.scroll, o.scroll + nl).forEach(([k, v], j) => { g.fillStyle = '#e8a33d'; g.fillText(k.slice(0, 26), 36, top + 24 + j * lh); g.fillStyle = 'rgba(214,220,224,.85)'; g.fillText(v.slice(0, 62), 340, top + 24 + j * lh); }); }
+    i.json.slice(o.scroll, o.scroll + nl).forEach(([k, v], j) => { g.fillStyle = '#D97757'; g.fillText(k.slice(0, 26), 36, top + 24 + j * lh); g.fillStyle = 'rgba(214,220,224,.85)'; g.fillText(v.slice(0, 62), 340, top + 24 + j * lh); }); }
   else if (i.text != null) { const ls = i.text.split('\n'), lh = 29, nl = Math.floor((H - top - 20) / lh); o.vlines = ls.length; o.vpage = nl; g.font = '19px "Cascadia Mono",Consolas,monospace';
     ls.slice(o.scroll, o.scroll + nl).forEach((l, k) => { const y = top + 22 + k * lh; g.fillStyle = 'rgba(130,140,146,.55)'; g.fillText(String(o.scroll + k + 1).padStart(4), 14, y); tokLine(g, l.replace(/\t/g, '  ').slice(0, 110), 84, y, W - 16); }); }
   else if (i.hex) { const by = i.hex.match(/../g) || [], lh = 30; o.vlines = 0; g.font = '19px "Cascadia Mono",Consolas,monospace';
     for (let r = 0; r < Math.min(Math.floor((H - top) / lh), Math.ceil(by.length / 16)); r++) { const row = by.slice(r * 16, r * 16 + 16), y = top + 24 + r * lh; g.fillStyle = 'rgba(130,140,146,.55)'; g.fillText((r * 16).toString(16).padStart(4, '0'), 20, y);
       g.fillStyle = 'rgba(220,226,230,.88)'; g.fillText(row.join(' '), 96, y); g.fillStyle = rgba(col, .85); g.fillText(row.map(h => { const c = parseInt(h, 16); return c > 31 && c < 127 ? String.fromCharCode(c) : '·'; }).join(''), 720, y); } }
   else if (o.wave) { const N = o.wave.length, mid = H / 2, p = o.audio && o.audio.duration ? o.audio.currentTime / o.audio.duration : 0;
-    for (let k = 0; k < N; k++) { const h = o.wave[k] * H * .38, x = 28 + k * (W - 56) / N; g.fillStyle = k / N <= p ? '#e8a33d' : rgba(col, .85); g.fillRect(x, mid - h, Math.max(1.5, (W - 56) / N - 1), h * 2); } }
+    for (let k = 0; k < N; k++) { const h = o.wave[k] * H * .38, x = 28 + k * (W - 56) / N; g.fillStyle = k / N <= p ? '#D97757' : rgba(col, .85); g.fillRect(x, mid - h, Math.max(1.5, (W - 56) / N - 1), h * 2); } }
   if (i.magic) { g.font = '18px "Segoe UI",sans-serif'; g.fillStyle = 'rgba(170,180,186,.7)'; g.fillText('firma: ' + i.magic, 28, H - 18); }
 }
 const textLike = i => i.text != null || i.table || i.json || i.hex;
@@ -36,7 +36,7 @@ async function pdfPage(o, page, width) {
   await pg.render({ canvasContext: g, viewport: vp }).promise; setCanvasTex(o); o.aspect = vp.width / vp.height; renderVbar();
 }
 function hiRes(o) { const i = o.info;
-  if (i.ext === 'pdf') return pdfPage(o, o.page || 1, 1500).catch(e => feed('error', '#e0605c', 'PDF: ' + e.message));
+  if (i.ext === 'pdf') return pdfPage(o, o.page || 1, 1500).catch(e => feed('error', '#C52235', 'PDF: ' + e.message));
   if (textLike(i) || o.wave) { o.cv.width = 1100; o.cv.height = o.wave ? 560 : 1400; o.aspect = o.cv.width / o.cv.height; drawHi(o); setCanvasTex(o); } }
 function lowRes(o) { const i = o.info;
   if (i.ext === 'pdf') return pdfPage(o, 1, 640).catch(() => {});
@@ -97,41 +97,41 @@ const canFollow = nd => nd && nd.n.pid && !String(nd.n.pid).startsWith('g') && !
 function startFollow(nd) {
   if (!canFollow(nd)) return; stopFollow(true); S.follow = false;
   Object.assign(FW, { on: true, pid: nd.n.pid, id: nd.id, name: nodeName(nd.n), snap: null, ev: [], hist: [], last: '', aiT: Date.now() - 120000 });
-  S.tabs.proc = 'seguir'; selectNode(nd); flyTo(nd.pos, 16); pollFollow(); FW.timer = setInterval(pollFollow, 2500); renderTop(); feed('siguiendo', '#e8a33d', FW.name);
+  S.tabs.proc = 'seguir'; selectNode(nd); flyTo(nd.pos, 16); pollFollow(); FW.timer = setInterval(pollFollow, 2500); renderTop(); feed('siguiendo', '#D97757', FW.name);
 }
-function stopFollow(silent) { if (!FW.on) return; clearInterval(FW.timer); FW.on = false; renderTop(); if (!silent) feed('deja de seguir', '#8a9399', FW.name); if (S.mode === 'proc') renderPanel(); }
+function stopFollow(silent) { if (!FW.on) return; clearInterval(FW.timer); FW.on = false; renderTop(); if (!silent) feed('deja de seguir', '#8b95a3', FW.name); if (S.mode === 'proc') renderPanel(); }
 function fwEvent(k, txt, col) { FW.ev.unshift({ t: Date.now(), k, txt, col }); FW.ev.length = Math.min(FW.ev.length, 120); FW.last = k + ' ' + txt; }
 async function pollFollow() {
   if (!FW.on) return; let d; try { d = await apiT('/api/follow?pid=' + FW.pid); } catch { return; } if (!FW.on) return;
-  if (d.gone) { fwEvent('termina', FW.name, '#e0605c'); stopFollow(); return; }
+  if (d.gone) { fwEvent('termina', FW.name, '#C52235'); stopFollow(); return; }
   const prev = FW.snap; FW.pids = new Set(d.procs.map(p => p.pid));
   const root = d.procs.find(p => p.pid === d.pid); if (root) { FW.hist.push({ cpu: root.cpu, ws: root.ws, io: root.io }); if (FW.hist.length > 90) FW.hist.shift(); }
   if (prev) {
     const pp = new Map(prev.procs.map(p => [p.pid, p])), np = new Map(d.procs.map(p => [p.pid, p]));
-    for (const [pid, p] of np) if (!pp.has(pid)) fwEvent('lanza', `${p.name} · ${p.cmd.replace(/^"[^"]*"\s*/, '').slice(0, 70)}`, '#4fb3ad');
-    for (const [pid, p] of pp) if (!np.has(pid)) fwEvent('termina', p.name, '#8a9399');
+    for (const [pid, p] of np) if (!pp.has(pid)) fwEvent('lanza', `${p.name} · ${p.cmd.replace(/^"[^"]*"\s*/, '').slice(0, 70)}`, '#1768B5');
+    for (const [pid, p] of pp) if (!np.has(pid)) fwEvent('termina', p.name, '#8b95a3');
     const loc = c => c.state !== 'escucha' && /^(127.|::1$|::ffff:127.)/.test(c.rip || ''), ck = c => c.pid + '|' + (c.state === 'escucha' ? 'L' + c.lport : c.rip + ':' + c.rport);
     const nl = d.net.filter(loc).length, pl = prev.net.filter(loc).length; if (nl !== pl) FW.locals = nl;
     prev.net = prev.net.filter(c => !loc(c)); const dnet = d.net.filter(c => !loc(c)); const pc = new Set(prev.net.map(ck)), nc = new Set(dnet.map(ck));
-    for (const c of dnet) if (!pc.has(ck(c))) fwEvent(c.state === 'escucha' ? 'escucha' : 'conecta', c.state === 'escucha' ? ':' + c.lport : `${c.host && c.host !== 'local' ? c.host : c.rip}:${c.rport}`, '#6f8fb3');
-    for (const c of prev.net) if (!nc.has(ck(c)) && c.state !== 'escucha') fwEvent('cierra', `${c.host && c.host !== 'local' ? c.host : c.rip}:${c.rport}`, '#8a9399');
-    if (prev.modules && d.modules) { const pm = new Set(prev.modules); d.modules.filter(m => !pm.has(m)).slice(0, 6).forEach(m => fwEvent('carga', m, '#9a8f7a')); }
-    if (prev.files && d.files) { const pf = new Set(prev.files), nf = new Set(d.files); d.files.filter(f => !pf.has(f)).slice(0, 8).forEach(f => fwEvent('abre', f, '#4fb3ad')); prev.files.filter(f => !nf.has(f)).slice(0, 4).forEach(f => fwEvent('cierra', f, '#8a9399')); }
-  } else fwEvent('empieza', `${d.procs.length} proceso${d.procs.length > 1 ? 's' : ''} · ${d.net.length} conexiones${d.modules ? ' · ' + d.modules.length + ' módulos' : ''}${d.files ? ' · ' + d.files.length + ' archivos abiertos' : ''}`, '#e8a33d');
+    for (const c of dnet) if (!pc.has(ck(c))) fwEvent(c.state === 'escucha' ? 'escucha' : 'conecta', c.state === 'escucha' ? ':' + c.lport : `${c.host && c.host !== 'local' ? c.host : c.rip}:${c.rport}`, '#269B65');
+    for (const c of prev.net) if (!nc.has(ck(c)) && c.state !== 'escucha') fwEvent('cierra', `${c.host && c.host !== 'local' ? c.host : c.rip}:${c.rport}`, '#8b95a3');
+    if (prev.modules && d.modules) { const pm = new Set(prev.modules); d.modules.filter(m => !pm.has(m)).slice(0, 6).forEach(m => fwEvent('carga', m, '#E6B844')); }
+    if (prev.files && d.files) { const pf = new Set(prev.files), nf = new Set(d.files); d.files.filter(f => !pf.has(f)).slice(0, 8).forEach(f => fwEvent('abre', f, '#1768B5')); prev.files.filter(f => !nf.has(f)).slice(0, 4).forEach(f => fwEvent('cierra', f, '#8b95a3')); }
+  } else fwEvent('empieza', `${d.procs.length} proceso${d.procs.length > 1 ? 's' : ''} · ${d.net.length} conexiones${d.modules ? ' · ' + d.modules.length + ' módulos' : ''}${d.files ? ' · ' + d.files.length + ' archivos abiertos' : ''}`, '#D97757');
   // for Claude sessions, the tool trace also goes on the timeline
-  const nd = G.nodes.get(FW.id); if (nd && nd.n.kind === 'claude') for (const s of S.sessions.values()) if (s.meta && (!nd.n.account || s.meta.account === nd.n.account)) for (const e of s.meta.trace) if (e.t > FW.aiT) { fwEvent('IA ' + e.op, e.abs ? base(e.abs) : e.target.slice(0, 70), '#e8a33d'); FW.aiT = Math.max(FW.aiT, e.t); }
+  const nd = G.nodes.get(FW.id); if (nd && nd.n.kind === 'claude') for (const s of S.sessions.values()) if (s.meta && (!nd.n.account || s.meta.account === nd.n.account)) for (const e of s.meta.trace) if (e.t > FW.aiT) { fwEvent('IA ' + e.op, e.abs ? base(e.abs) : e.target.slice(0, 70), '#D97757'); FW.aiT = Math.max(FW.aiT, e.t); }
   FW.snap = d; if (nd && VIEW.cur === 'sistema') { focusT.copy(nd.pos); focusing = true; focusDir = null; focusD = Math.min(30, Math.max(10, camera.position.distanceTo(controls.target))); }
   if (S.mode === 'proc' && S.tabs.proc === 'seguir') renderPanel();
 }
-function followFs(m, c) { if (!FW.on || !FW.pids || !m.who) return; for (const pid of FW.pids) if (m.who.includes('#' + pid)) { fwEvent(m.type, `${c.name}/${m.file.replace(/\\/g, '/')}`, '#4fb3ad'); break; } }
+function followFs(m, c) { if (!FW.on || !FW.pids || !m.who) return; for (const pid of FW.pids) if (m.who.includes('#' + pid)) { fwEvent(m.type, `${c.name}/${m.file.replace(/\\/g, '/')}`, '#1768B5'); break; } }
 function renderFollowTab(el, nd) {
   if (!FW.on || FW.id !== nd.id) { el.innerHTML = canFollow(nd) ? `<div class="note" style="line-height:1.6">Acompaña en vivo a este proceso y a sus hijos: qué lanza, qué carga en memoria, con quién conecta y qué archivos toca. Solo observa; no lo modifica.</div><div class="acts"><button id="fw-go" class="ai on">${IC('eye')}Seguir ${esc(nodeName(nd.n))}</button></div>` : '<div class="note">Este nodo no se puede seguir.</div>';
     const b = $('#fw-go'); if (b) b.onclick = () => startFollow(nd); return; }
   el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><span class="note">${FW.ev.length ? 'Siguiendo desde hace ' + ago(FW.ev[FW.ev.length - 1].t) : 'Siguiendo desde ahora'}${FW.locals ? ' · ' + FW.locals + ' conexiones locales' : ''}</span><button id="fw-stop">Dejar de seguir</button></div>
-    <canvas id="fspark" width="680" height="88"></canvas><div class="hint" style="margin:-4px 0 8px"><i class="sw" style="background:#e8a33d"></i>CPU <i class="sw" style="background:#4fb3ad;margin-left:10px"></i>RAM</div>
+    <canvas id="fspark" width="680" height="88"></canvas><div class="hint" style="margin:-4px 0 8px"><i class="sw" style="background:#D97757"></i>CPU <i class="sw" style="background:#1768B5;margin-left:10px"></i>RAM</div>
     <div class="tl">${FW.ev.slice(0, 40).map(e => `<div style="--k:${e.col}"><time>${new Date(e.t).toTimeString().slice(0, 8)}</time><span><b>${esc(e.k)}</b> ${esc(e.txt)}</span></div>`).join('') || '<div class="note">Todavía no ha lanzado procesos, abierto conexiones ni tocado archivos. La gráfica de arriba ya muestra su CPU y RAM.</div>'}</div>`;
   $('#fw-stop').onclick = () => stopFollow();
   const cv = $('#fspark'), g = cv.getContext('2d'), W = cv.width, H = cv.height, hs = FW.hist.length === 1 ? [FW.hist[0], FW.hist[0]] : FW.hist; if (hs.length > 1) { g.fillStyle = 'rgba(200,208,214,.75)'; g.font = '12px Segoe UI'; g.fillText('CPU ' + hs[hs.length - 1].cpu + ' % · RAM ' + fmtB(hs[hs.length - 1].ws), 6, 14); const mc = Math.max(10, ...hs.map(h => h.cpu)), mw = Math.max(...hs.map(h => h.ws));
-    [['cpu', mc, '#e8a33d'], ['ws', mw, '#4fb3ad']].forEach(([f, mx, col]) => { g.beginPath(); hs.forEach((h, i) => { const x = i / 89 * W, y = H - 4 - h[f] / mx * (H - 8); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.strokeStyle = col; g.lineWidth = 2; g.stroke(); }); }
+    [['cpu', mc, '#D97757'], ['ws', mw, '#1768B5']].forEach(([f, mx, col]) => { g.beginPath(); hs.forEach((h, i) => { const x = i / 89 * W, y = H - 4 - h[f] / mx * (H - 8); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.strokeStyle = col; g.lineWidth = 2; g.stroke(); }); }
 }
 

@@ -3,7 +3,7 @@
 // Copyright 2026 virtuanista
 //
 // Demo: builds a fictional studio (projects, photos, docs, data) in the temp folder and opens it,
-// so vxtop can be tried or shown without exposing your own files.
+// so prisma can be tried or shown without exposing your own files.
 // Usage: node scripts/demo.js                      open the demo in your browser
 //        node scripts/demo.js --shot <file.png>    save one screenshot and exit
 //        node scripts/demo.js --media <dir>        screenshots of every view and a short video (needs ffmpeg)
@@ -37,7 +37,7 @@ function build(root) {
   for (const [name, p] of Object.entries(STUDIO)) {
     const base = path.join(root, name), dirs = ['', ...p.sub];
     for (const d of dirs) fs.mkdirSync(path.join(base, d), { recursive: true });
-    fs.writeFileSync(path.join(base, 'README.md'), `# ${name}\n\nPart of the vxtop demo studio.\n`);
+    fs.writeFileSync(path.join(base, 'README.md'), `# ${name}\n\nPart of the prisma demo studio.\n`);
     for (let i = 0; i < p.n; i++) {
       const dir = path.join(base, pick(dirs)), ext = pick(p.ext), kb = p.kb[0] + Math.pow(rnd(), 3) * (p.kb[1] - p.kb[0]);
       const f = path.join(dir, `${name.split('-')[0]}-${String(i).padStart(3, '0')}.${ext}`);
@@ -49,17 +49,17 @@ function build(root) {
 
 (async () => {
   // a path without your user name, so screenshots can be shared (and not under Temp, which would make every cube a «cache»)
-  const base = process.platform === 'win32' && process.env.PUBLIC ? path.join(process.env.PUBLIC, 'vxtop-demo') : path.join(os.tmpdir(), 'vxtop-demo'), root = path.join(base, 'studio'), home = path.join(base, 'home');
+  const base = process.platform === 'win32' && process.env.PUBLIC ? path.join(process.env.PUBLIC, 'prisma-demo') : path.join(os.tmpdir(), 'prisma-demo'), root = path.join(base, 'studio'), home = path.join(base, 'home');
   fs.rmSync(root, { recursive: true, force: true }); fs.mkdirSync(root, { recursive: true }); fs.mkdirSync(home, { recursive: true });
   build(root);
   const dirs = Object.keys(STUDIO).map(n => path.join(root, n));
   const srv = await startServer({ dirs, home, extra: ['--demo'] });
-  console.log(`Demo studio in ${root}\nvxtop → ${srv.url}`);
+  console.log(`Demo studio in ${root}\nprisma → ${srv.url}`);
   if (!SHOT && !MEDIA) { const open = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', srv.url]] : [process.platform === 'darwin' ? 'open' : 'xdg-open', [srv.url]]; spawn(open[0], open[1], { stdio: 'ignore', detached: true }).unref(); return; }
 
   // --shot / --media: headless Chrome, dismiss the welcome, frame everything, capture
   const chrome = findChrome(); if (!chrome) throw new Error('Chrome not found (set CHROME_PATH)');
-  const dbg = await freePort(), prof = fs.mkdtempSync(path.join(os.tmpdir(), 'vxtop-demo-chrome-'));
+  const dbg = await freePort(), prof = fs.mkdtempSync(path.join(os.tmpdir(), 'prisma-demo-chrome-'));
   const ch = spawn(chrome, ['--headless=new', `--remote-debugging-port=${dbg}`, `--user-data-dir=${prof}`, '--window-size=1600,900', '--use-angle=d3d11', '--enable-gpu', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let target; for (let i = 0; i < 40 && !target; i++) { await sleep(250); try { target = (await (await fetch(`http://127.0.0.1:${dbg}/json`)).json()).find(x => x.type === 'page'); } catch {} }
@@ -69,7 +69,7 @@ function build(root) {
   const ev = x => cdp('Runtime.evaluate', { expression: x, awaitPromise: true, returnByValue: true }).then(r => r.result.result?.value);
   const key = async (k, code) => { await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, text: k }); await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code }); };
   await cdp('Page.navigate', { url: srv.url }); await sleep(6000);
-  await ev(`localStorage.setItem('vxtop.welcome', '1'); document.querySelector('#modal [data-r]') && document.querySelector('#modal [data-r]').click(); 1`);
+  await ev(`localStorage.setItem('prisma.welcome', '1'); document.querySelector('#modal [data-r]') && document.querySelector('#modal [data-r]').click(); 1`);
   await key('h', 'KeyH'); await sleep(2500);
   const png = async file => { const r = await cdp('Page.captureScreenshot', { format: 'png' }); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.from(r.result.data, 'base64')); console.log('saved ' + file); };
   if (SHOT) await png(SHOT);
@@ -82,11 +82,11 @@ async function media({ cdp, ev, key, sleep, png, root }) {
   const { execFileSync } = require('child_process'), J = async x => JSON.parse(await ev(`JSON.stringify(${x})`));
   const mouse = (type, x, y, extra = {}) => cdp('Input.dispatchMouseEvent', { type, x, y, ...extra });
   const click = async (x, y) => { await mouse('mouseMoved', x, y); await mouse('mousePressed', x, y, { button: 'left', clickCount: 1 }); await mouse('mouseReleased', x, y, { button: 'left', clickCount: 1 }); };
-  const scr = name => `(() => { const S = window.__vxtop, c = [...S.cubes.values()].find(c => c.name === ${JSON.stringify(name)}); const v = c.pos.clone().project(S.camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; })()`;
+  const scr = name => `(() => { const S = window.__prisma, c = [...S.cubes.values()].find(c => c.name === ${JSON.stringify(name)}); const v = c.pos.clone().project(S.camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; })()`;
   const touch = (n = 6) => { for (let i = 0; i < n; i++) { const d = path.join(root, i % 2 ? 'web-app' : 'docs'); fs.writeFileSync(path.join(d, `live-${i}.${i % 2 ? 'ts' : 'md'}`), 'edit ' + Date.now()); } };
   await png(path.join(MEDIA, 'overview.png'));
   // video: frames from the screencast while things happen
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vxtop-frames-')); let n = 0; const t0 = Date.now();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prisma-frames-')); let n = 0; const t0 = Date.now();
   cdpFrames.on = async p => { fs.writeFileSync(path.join(dir, `f${String(n++).padStart(4, '0')}.jpg`), Buffer.from(p.data, 'base64')); cdp('Page.screencastFrameAck', { sessionId: p.sessionId }); };
   await cdp('Page.startScreencast', { format: 'jpeg', quality: 82, everyNthFrame: 1 });
   touch(); await sleep(1500);
@@ -101,5 +101,5 @@ async function media({ cdp, ev, key, sleep, png, root }) {
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', path.join(dir, 'f%04d.jpg'), '-vf', 'fps=12,scale=880:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', path.join(MEDIA, 'demo.gif')]);
   console.log(`saved demo.mp4 and demo.gif (${n} frames, ${secs.toFixed(1)} s)`); fs.rmSync(dir, { recursive: true, force: true });
   // the other views
-  await key('a', 'KeyA'); await sleep(800); await ev(`window.__vxtop.trOpen(${JSON.stringify(root)})`); await sleep(4000); await png(path.join(MEDIA, 'tree.png'));
+  await key('a', 'KeyA'); await sleep(800); await ev(`window.__prisma.trOpen(${JSON.stringify(root)})`); await sleep(4000); await png(path.join(MEDIA, 'tree.png'));
 }

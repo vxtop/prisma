@@ -6,8 +6,8 @@
 // filmstrip, slideshow). Read-only: it only reads files through /api/raw.
 const GA = { c: null, root: '', sep: '\\', all: [], list: [], dirs: [], tree: new Map(), dir: '', kind: 'all', q: '', sort: 'name', group: true, crop: false,
   size: 180, sel: -1, shown: 0, lb: null, req: 0, truncated: false };
-try { const g = JSON.parse(localStorage.getItem('vxtop.gallery') || '{}'); for (const k of ['sort', 'group', 'crop', 'size']) if (g[k] != null) GA[k] = g[k]; } catch {}
-const gaSave = () => { try { localStorage.setItem('vxtop.gallery', JSON.stringify({ sort: GA.sort, group: GA.group, crop: GA.crop, size: GA.size })); } catch {} };
+try { const g = JSON.parse(localStorage.getItem('prisma.gallery') || '{}'); for (const k of ['sort', 'group', 'crop', 'size']) if (g[k] != null) GA[k] = g[k]; } catch {}
+const gaSave = () => { try { localStorage.setItem('prisma.gallery', JSON.stringify({ sort: GA.sort, group: GA.group, crop: GA.crop, size: GA.size })); } catch {} };
 const GA_IC = { image: 'M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4 M15 9.5h.01', video: 'M4 6h12v12H4z M16 10l4-2.5v9L16 14', audio: 'M9 17V6l10-2v11 M9 17a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z M19 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z' };
 const gaSvg = (d, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24">${d.split(' M').map((p, i) => `<path d="${i ? 'M' + p : p}"/>`).join('')}</svg>`;
 const GA_KT = { image: 'Imágenes', video: 'Vídeos', audio: 'Audio' };
@@ -16,7 +16,7 @@ const gaAbs = it => GA.root.replace(/[\\/]+$/, '') + GA.sep + it.r;
 
 // --- thumbnails: decoded once, cached in memory and in IndexedDB (key = path + size + mtime) ---
 const TH = { mem: new Map(), q: [], busy: 0, db: null, dbP: null };
-function thDB() { if (TH.dbP) return TH.dbP; TH.dbP = new Promise(res => { try { const r = indexedDB.open('vxtop-thumbs', 1); r.onupgradeneeded = () => r.result.createObjectStore('t'); r.onsuccess = () => res(TH.db = r.result); r.onerror = () => res(null); } catch { res(null); } }); return TH.dbP; }
+function thDB() { if (TH.dbP) return TH.dbP; TH.dbP = new Promise(res => { try { const r = indexedDB.open('prisma-thumbs', 1); r.onupgradeneeded = () => r.result.createObjectStore('t'); r.onsuccess = () => res(TH.db = r.result); r.onerror = () => res(null); } catch { res(null); } }); return TH.dbP; }
 async function thGet(k) { const db = await thDB(); if (!db) return null; return new Promise(res => { try { const q = db.transaction('t').objectStore('t').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch { res(null); } }); }
 async function thPut(k, v) { const db = await thDB(); if (!db) return; try { db.transaction('t', 'readwrite').objectStore('t').put(v, k); } catch {} }
 const thKey = it => K(gaAbs(it)) + '|' + it.s + '|' + it.m;
@@ -161,8 +161,8 @@ lbx.innerHTML = `<div class="lt"><span class="ltn"><b id="lb-n"></b><span id="lb
     <div id="lb-mm"><img alt=""><i></i></div><div id="lb-ld"></div></div>
   <aside id="lb-i"></aside><div class="lf" id="lb-f"></div>`;
 const LB = { i: -1, s: 1, cx: 0, cy: 0, rot: 0, w: 0, h: 0, el: null, bg: 0, info: false, show: 0, ptr: new Map(), pinch: null, fit: 1 };
-try { const g = JSON.parse(localStorage.getItem('vxtop.lightbox') || '{}'); LB.bg = g.bg | 0; LB.info = !!g.info; } catch {}
-const lbSave = () => { try { localStorage.setItem('vxtop.lightbox', JSON.stringify({ bg: LB.bg, info: LB.info })); } catch {} };
+try { const g = JSON.parse(localStorage.getItem('prisma.lightbox') || '{}'); LB.bg = g.bg | 0; LB.info = !!g.info; } catch {}
+const lbSave = () => { try { localStorage.setItem('prisma.lightbox', JSON.stringify({ bg: LB.bg, info: LB.info })); } catch {} };
 const lv = $('#lb-v'), lc = $('#lb-c');
 function openLightbox(i) { GA.lb = true; lbx.style.display = 'flex'; lbShow(i); }
 function closeLightbox() { lbStopShow(); const m = lc.querySelector('video,audio'); if (m) m.pause(); lc.innerHTML = ''; GA.lb = null; lbx.style.display = 'none'; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); gaSelect(LB.i); gm.focus(); }

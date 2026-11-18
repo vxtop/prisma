@@ -9,14 +9,14 @@ const olGeo = new THREE.BufferGeometry(); olGeo.setAttribute('position', new THR
 const objLines = new THREE.LineSegments(olGeo, new THREE.LineBasicMaterial({ color: 0x8fa3a8, transparent: true, opacity: .35, depthWrite: false })); objLines.frustumCulled = false; scene.add(objLines);
 async function openObject(p, focus = true) {
   let o = OB.list.find(x => K(x.path) === K(p)); if (o) return selectObj(o, focus);
-  let info; try { info = await apiT('/api/file?path=' + encodeURIComponent(p)); } catch (e) { feed('error', '#d9534f', e.message); return; }
+  let info; try { info = await apiT('/api/file?path=' + encodeURIComponent(p)); } catch (e) { feed('error', '#C52235', e.message); return; }
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 640; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const mesh = new THREE.Mesh(objGeo, new THREE.MeshBasicMaterial({ map: tex, color: 0xe2e2e2, toneMapped: false, side: THREE.DoubleSide, transparent: true, depthWrite: true })); // just below white so it does not bloom
   const slab = new THREE.Mesh(tabGeo, new THREE.MeshStandardMaterial({ color: GRAPHITE, roughness: .8, metalness: .05 })); slab.position.z = -.05; slab.scale.set(1.07, 1.07, 1); mesh.add(slab);
   const spine = new THREE.Mesh(spineGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(KIND_COL[info.kind] || '#888').multiplyScalar(.9), toneMapped: false })); spine.position.set(-.545, 0, -.03); mesh.add(spine);
   const label = textSprite(1024, 128); label.material.sizeAttenuation = false; label.center.set(.5, 1); scene.add(mesh, label);
   o = { id: ++OB.id, path: info.path, info, mesh, slab, spine, tex, cv, label, aspect: .8, pos: new THREE.Vector3(), s: .01, el: null, scroll: 0, wave: null };
-  drawText(label, [[info.name, 46, 'rgba(238,241,243,.9)', 50], [`${KIND_TXT[info.kind] || info.kind} · ${fmtB(info.size)}`, 30, KIND_COL[info.kind] || '#888', 100]]);
+  drawText(label, [[info.name, 46, 'rgba(240,235,221,.9)', 50], [`${KIND_TXT[info.kind] || info.kind} · ${fmtB(info.size)}`, 30, KIND_COL[info.kind] || '#888', 100]]);
   OB.list.push(o); if (OB.list.length > 12) closeObj(OB.list[0]);
   objAnchor(o, OB.list.length - 1, o.pos); o.pos.y -= 2; buildPreview(o); selectObj(o, focus); feed('objeto', KIND_COL[info.kind] || '#888', info.name);
 }
@@ -36,8 +36,8 @@ function objAnchor(o, i, out) {
 function buildPreview(o) {
   const i = o.info;
   if (i.kind === 'image' && i.mime) { drawCard(o); new THREE.TextureLoader().load(rawURL(i.path), t => { if (!OB.list.includes(o)) return t.dispose(); t.colorSpace = THREE.SRGBColorSpace; o.mesh.material.map = t; o.mesh.material.needsUpdate = true; o.tex.dispose(); o.tex = t; o.aspect = t.image.width / t.image.height || 1; i.dims = `${t.image.width}×${t.image.height}`; if (OB.sel === o) renderPanel(); }, undefined, () => {}); return; }
-  if (i.kind === 'model3d' && /^(glb|gltf|obj|stl|fbx)$/.test(i.ext)) { drawCard(o); loadModel(o).catch(e => feed('error', '#d9534f', 'modelo 3D: ' + e.message)); return; }
-  if (i.ext === 'pdf') { drawCard(o); loadPdf(o).catch(e => feed('error', '#d9534f', 'PDF: ' + e.message)); return; }
+  if (i.kind === 'model3d' && /^(glb|gltf|obj|stl|fbx)$/.test(i.ext)) { drawCard(o); loadModel(o).catch(e => feed('error', '#C52235', 'modelo 3D: ' + e.message)); return; }
+  if (i.ext === 'pdf') { drawCard(o); loadPdf(o).catch(e => feed('error', '#C52235', 'PDF: ' + e.message)); return; }
   if (i.kind === 'video') { const v = document.createElement('video'); v.onerror = () => { new THREE.TextureLoader().load('/api/thumb?t=' + TK() + '&path=' + encodeURIComponent(i.path), t => { if (!OB.list.includes(o)) return t.dispose(); t.colorSpace = THREE.SRGBColorSpace; o.mesh.material.map = t; o.mesh.material.needsUpdate = true; o.aspect = t.image.width / t.image.height || 1.7; i.dims = 'fotograma (formato no reproducible en el navegador)'; }, undefined, () => drawCard(o)); }; v.src = rawURL(i.path); v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
     v.onloadedmetadata = () => { o.aspect = v.videoWidth / v.videoHeight || 1.7; i.dims = `${v.videoWidth}×${v.videoHeight} · ${v.duration.toFixed(1)} s`; v.play().catch(() => {}); if (OB.sel === o) renderPanel(); };
     const t = new THREE.VideoTexture(v); t.colorSpace = THREE.SRGBColorSpace; o.mesh.material.map = t; o.mesh.material.needsUpdate = true; o.tex.dispose(); o.tex = t; o.el = v; o.aspect = 1.7; return; }
@@ -51,7 +51,7 @@ const KW = /^(function|const|let|var|return|if|else|for|while|do|import|from|exp
 function tokLine(g, line, x, y, maxW) {
   const parts = line.split(/(\/\/.*$|#(?![\w-]*[;{]).*$|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`|\b\w+\b)/);
   for (const p of parts) { if (!p) continue; if (x > maxW) break;
-    g.fillStyle = /^(\/\/|#)/.test(p) ? 'rgba(140,150,156,.55)' : /^["'`]/.test(p) ? '#7cc4bd' : KW.test(p) ? '#e8a33d' : /^\d/.test(p) ? '#b9a0d6' : 'rgba(222,228,232,.86)';
+    g.fillStyle = /^(\/\/|#)/.test(p) ? 'rgba(140,150,156,.55)' : /^["'`]/.test(p) ? '#7cc4bd' : KW.test(p) ? '#D97757' : /^\d/.test(p) ? '#b9a0d6' : 'rgba(222,228,232,.86)';
     g.fillText(p, x, y); x += g.measureText(p).width; }
 }
 function drawCard(o) {
@@ -64,9 +64,9 @@ function drawCard(o) {
     ls.slice(0, nl).forEach((l, k) => { g.fillStyle = 'rgba(120,130,136,.4)'; g.fillText(String(k + 1).padStart(3), 8, top + 12 + k * 15); tokLine(g, l.replace(/\t/g, '  ').slice(0, 90), 40, top + 12 + k * 15, W - 8); }); }
   else if (i.table) { const rows = i.table.slice(0, 30), cols = Math.min(6, Math.max(...rows.map(r => r.length))), cw = (W - 24) / cols; g.font = '11px "Cascadia Code",Consolas,monospace';
     rows.forEach((r, k) => { if (k === 0) { g.fillStyle = rgba(col, .15); g.fillRect(8, top, W - 16, 18); } for (let c = 0; c < cols; c++) { g.fillStyle = k ? 'rgba(222,228,232,.8)' : rgba(col, 1); g.fillText(String(r[c] ?? '').slice(0, Math.floor(cw / 7) - 1), 12 + c * cw, top + 13 + k * 19); } g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(8, top + 18 + k * 19, W - 16, 1); }); }
-  else if (i.json) { g.font = '12px "Cascadia Code",Consolas,monospace'; i.json.slice(0, 34).forEach(([k, v], j) => { g.fillStyle = '#e8a33d'; g.fillText(k.slice(0, 22), 14, top + 14 + j * 16); g.fillStyle = 'rgba(200,208,212,.7)'; g.fillText(v.slice(0, 48), 190, top + 14 + j * 16); }); }
+  else if (i.json) { g.font = '12px "Cascadia Code",Consolas,monospace'; i.json.slice(0, 34).forEach(([k, v], j) => { g.fillStyle = '#D97757'; g.fillText(k.slice(0, 22), 14, top + 14 + j * 16); g.fillStyle = 'rgba(200,208,212,.7)'; g.fillText(v.slice(0, 48), 190, top + 14 + j * 16); }); }
   else if (o.wave) { const N = o.wave.length, mid = H / 2 + 10; g.fillStyle = rgba(col, .9); for (let k = 0; k < N; k++) { const h = o.wave[k] * (H * .36); g.fillRect(16 + k * (W - 32) / N, mid - h, Math.max(1, (W - 32) / N - .6), h * 2); } }
-  else if (o.font) { g.fillStyle = 'rgba(238,241,243,.9)'; [64, 40, 26, 18].forEach((s, k) => { g.font = `${s}px ${o.font}`; g.fillText(k ? 'Aa Bb Cc 0123 ñ á' : 'Aa Gg Ññ', 18, top + 70 + k * 80); }); }
+  else if (o.font) { g.fillStyle = 'rgba(240,235,221,.9)'; [64, 40, 26, 18].forEach((s, k) => { g.font = `${s}px ${o.font}`; g.fillText(k ? 'Aa Bb Cc 0123 ñ á' : 'Aa Gg Ññ', 18, top + 70 + k * 80); }); }
   else if (i.hex) { g.font = '12px "Cascadia Code",Consolas,monospace'; const by = i.hex.match(/../g) || [];
     for (let r = 0; r < Math.min(30, Math.ceil(by.length / 12)); r++) { const row = by.slice(r * 12, r * 12 + 12); g.fillStyle = 'rgba(120,130,136,.45)'; g.fillText((r * 12).toString(16).padStart(4, '0'), 10, top + 14 + r * 17);
       g.fillStyle = 'rgba(210,216,220,.8)'; g.fillText(row.join(' '), 56, top + 14 + r * 17); g.fillStyle = rgba(col, .8); g.fillText(row.map(h => { const c = parseInt(h, 16); return c > 31 && c < 127 ? String.fromCharCode(c) : '·'; }).join(''), 390, top + 14 + r * 17); } }

@@ -12,7 +12,7 @@ function makeCube(info) {
     heat: new Float32Array(27), pulse: new Float32Array(27), nv: 0, vcell: new Uint8Array(VPC), vslot: new Float32Array(VPC * 6), vbase: new Float32Array(VPC * 3), vheat: new Float32Array(VPC), vfl: new Float32Array(VPC * 3),
     slotOf: new Map(), relOf: [], ai: new Map(), cellDirty: true, colDirty: true, aiHot: 0, off: new THREE.Vector3() };
   const par = info.parent && S.cubes.get(K(info.parent)); if (par) c.pos.copy(par.pos);
-  for (let i = 0; i < 27; i++) { const o = (slot * 27 + i) * 3, t = TYPE_COL[i % 3]; CC[o] = .05 + t.r * .03; CC[o+1] = .055 + t.g * .03; CC[o+2] = .062 + t.b * .03; }
+  gemBody(c);
   cellsIM.instanceColor.needsUpdate = true;
   c.label = textSprite(768, 96); c.label.material.sizeAttenuation = false; c.label.material.depthTest = false; c.label.renderOrder = 6; c.label.center.set(.5, 0); scene.add(c.label); drawLabel(c);
   S.cubes.set(c.key, c); return c;
@@ -25,7 +25,7 @@ function dispName(c) {
   if (!GENERIC.has(n.toLowerCase()) && n.length > 3) return n;
   const parts = String(c.path || '').split(/[\\/]+/).filter(Boolean), par = parts[parts.length - 2]; return par && !/^[A-Za-z]:$/.test(par) ? par + ' › ' + n : n;
 }
-function drawLabel(c) { const pr = c.data && c.data.preset ? c.data.preset.types.filter(x => x[0] !== 'carpeta').map(x => x[1]).slice(0, 2).join(' · ') : ''; drawText(c.label, [[dispName(c), 44, '#f2f4f5', 35], [(c.kind ? KINDS[c.kind][1] + ' ' + KINDS[c.kind][2] + ' · ' : '') + (c.data ? `${fmtB(c.data.totals.bytes)} · ${fmtN(c.data.totals.files)} archivos${pr && !c.kind ? ' · ' + pr : ''}` : 'leyendo…'), 36, c.kind ? KINDS[c.kind][0] : 'rgba(190,200,206,.85)', 76]]); }
+function drawLabel(c) { const pr = c.data && c.data.preset ? c.data.preset.types.filter(x => x[0] !== 'carpeta').map(x => x[1]).slice(0, 2).join(' · ') : ''; const g = c.data && c.gem ? c.gem : null; drawText(c.label, [[dispName(c), 44, '#f2f4f5', 35], [(g ? '◆ ' + GEM_TXT[g] + ' · ' : '') + (c.kind && !(g && (c.kind === 'codigo' || c.kind === 'medios')) ? KINDS[c.kind][1] + ' ' + KINDS[c.kind][2] + ' · ' : '') + (c.data ? `${fmtB(c.data.totals.bytes)} · ${fmtN(c.data.totals.files)} archivos${pr && !c.kind ? ' · ' + pr : ''}` : 'leyendo…'), 36, g ? GEM_HEX[g][1] : c.kind ? KINDS[c.kind][0] : 'rgba(190,200,206,.85)', 76]]); }
 const lastPos = new Map();
 function dropCube(c) {
   for (let i = 0; i < 27; i++) setM(CM, c.slot * 27 + i, 0, 0, 0, 0, 0, 0);
@@ -37,29 +37,33 @@ function dropCube(c) {
 }
 // assigns files to windows
 function buildVoxels(c) {
-  const d = c.data, now = Date.now(); c.slotOf.clear(); c.relOf = []; let k = 0;
-  for (let i = 0; i < 27; i++) { const sl = SLOTS[i], top = d.cells[i].top || [], col = TYPE_COL[i % 3];
+  const d = c.data, now = Date.now(), col = GEM[cubeGem(c)][1]; c.slotOf.clear(); c.relOf = []; let k = 0;
+  for (let i = 0; i < 27; i++) { const sl = SLOTS[i], top = d.cells[i].top || [];
     for (let j = 0; j < Math.min(sl.length, top.length); j++) { const f = top[j];
       c.vcell[k] = i; c.vslot.set(sl[j], k * 6);
-      const age = (now - f.mtime) / 864e5, rec = Math.exp(-age / 6) * .7 + Math.min(1, Math.log10(1 + f.size) / 7) * .3, br = .16 + .62 * rec;
-      c.vbase[k*3] = col.r * br; c.vbase[k*3+1] = col.g * br; c.vbase[k*3+2] = col.b * br;
+      const age = (now - f.mtime) / 864e5, rec = Math.exp(-age / 6) * .7 + Math.min(1, Math.log10(1 + f.size) / 7) * .3, br = .12 + .5 * rec;
+      // windows glow in the cube's own gem, a little washed towards pearl so they read as light on the metal
+      c.vbase[k*3] = (col.r * .8 + .2) * br; c.vbase[k*3+1] = (col.g * .8 + .2) * br; c.vbase[k*3+2] = (col.b * .8 + .19) * br;
       c.slotOf.set(K(f.rel), k); c.relOf[k] = f.rel; k++; } }
   for (let j = k; j < c.nv; j++) setM(VM, c.slot * VPC + j, 0, 0, 0, 0, 0, 0); if (c.nv > k) voxIM.instanceMatrix.addUpdateRange((c.slot * VPC + k) * 16, (c.nv - k) * 16);
   c.nv = k; c.cellDirty = true; c.colDirty = true; voxIM.instanceMatrix.needsUpdate = true;
 }
 const sliceOut = i => S.slice && coord(i)[S.slice.axis] !== S.slice.layer;
-function cellWorld(c, i, out) { const sp = (1 + .9 * c.ex) * c.s, b = BASE[i]; return out.set(c.pos.x + b[0] * sp, c.pos.y + b[1] * sp, c.pos.z + b[2] * sp); }
-function voxWorld(c, k, out) { const i = c.vcell[k], sp = (1 + .9 * c.ex) * c.s, b = BASE[i], o = k * 6; return out.set(c.pos.x + b[0] * sp + c.vslot[o] * c.s, c.pos.y + b[1] * sp + c.vslot[o+1] * c.s, c.pos.z + b[2] * sp + c.vslot[o+2] * c.s); }
-function writeCube(c) {
-  const P = c.pos, s = c.s, sp = (1 + .9 * c.ex) * s, b0 = c.slot * 27, v0 = c.slot * VPC, hv = S.hover && S.hover.c === c ? S.hover.idx : -1;
-  for (let i = 0; i < 27; i++) { const b = BASE[i], out = sliceOut(i), sc = s * .92 * (out ? .3 : 1) * (i === hv ? 1.05 : 1); setM(CM, b0 + i, P.x + b[0] * sp, P.y + b[1] * sp, P.z + b[2] * sp, sc, sc, sc); }
-  for (let k = 0; k < c.nv; k++) { const i = c.vcell[k], b = BASE[i], o = k * 6, out = sliceOut(i) ? 0 : s;
-    setM(VM, v0 + k, P.x + b[0] * sp + c.vslot[o] * s, P.y + b[1] * sp + c.vslot[o+1] * s, P.z + b[2] * sp + c.vslot[o+2] * s, c.vslot[o+3] * out, c.vslot[o+4] * out, c.vslot[o+5] * out); }
+// one body per cube: cells and file windows are data, not geometry, so they all sit at its centre
+function cellWorld(c, i, out) { return out.copy(c.pos); }
+function voxWorld(c, k, out) { return out.copy(c.pos); }
+function writeCube(c) { // a single solid cube (cell 13, the centre); the cube you are inside is drawn as its glass case instead
+  const P = c.pos, b0 = c.slot * 27, v0 = c.slot * VPC, hv = S.hover && S.hover.c === c, sc = c.key === S.enter ? 0 : c.s * 2.92 * (hv ? 1.04 : 1);
+  for (let i = 0; i < 27; i++) i === 13 ? setM(CM, b0 + i, P.x, P.y, P.z, sc, sc, sc) : setM(CM, b0 + i, 0, 0, 0, 0, 0, 0);
+  for (let k = 0; k < c.nv; k++) setM(VM, v0 + k, 0, 0, 0, 0, 0, 0);
   cellsIM.instanceMatrix.addUpdateRange(b0 * 16, 27 * 16); if (c.nv) voxIM.instanceMatrix.addUpdateRange(v0 * 16, c.nv * 16);
   cellsIM.instanceMatrix.needsUpdate = true; voxIM.instanceMatrix.needsUpdate = true;
 }
 
 // === Space: cluster / stack / network / orbit ===
+const GEM_ORDER = { code: 0, data: 1, docs: 2, exe: 3, folder: 4 };
+/** Heavier folders are bigger cubes (gently: from 1 KB to 100 GB the edge grows about 40 %). */
+const weightF = c => c.data ? .82 + .4 * Math.min(1, Math.log10(1 + c.data.totals.bytes) / 11) : .9;
 const SC = [1, .55, .32, .2], OPEN_EX = .3; // spacing of the 27 cells of the selected cube
 function layout(resetManual) {
   layoutCore(resetManual);
@@ -70,17 +74,18 @@ function layoutCore(resetManual) {
   const kidsOf = (list, c) => list.filter(x => x.parent && K(x.parent) === c.key).sort((a, b) => a.seq - b.seq); // arrival order, so nothing jumps when data loads
   const full = [], walkF = (c, d) => { c.depth = d; full.push(c); kidsOf(allC, c).forEach(x => walkF(x, d + 1)); }; allC.filter(c => !c.parent || !S.cubes.has(K(c.parent))).forEach(c => walkF(c, 0));
   if (S.enter && !S.cubes.has(S.enter)) S.enter = null;
-  for (const c of allC) c.vis = S.enter ? (c.key === S.enter || (!!c.parent && K(c.parent) === S.enter)) : (!c.parent || !S.cubes.has(K(c.parent)) || S.layout === 'stack' || (!!S.peek && K(c.parent) === S.peek));
+  for (const c of allC) c.vis = S.enter ? (c.key === S.enter || (!!c.parent && K(c.parent) === S.enter)) : (!c.parent || !S.cubes.has(K(c.parent)) || S.layout === 'stack');
   const all = allC.filter(c => c.vis), kids = c => kidsOf(all, c), cores = all.filter(c => !c.parent || !all.some(o => o.key === K(c.parent))), order = [];
   const walk = (c, d) => { c.vdepth = d; order.push(c); kids(c).forEach(x => walk(x, d + 1)); }; cores.forEach(c => walk(c, 0));
   S.order = full; S.vorder = order; S.cores = cores; const mode = S.layout;
   if (resetManual) order.forEach(c => c.manual = null);
+  if (S.enter) return inLayout(all); // inside a cube: its contents on a grid within its glass case
   if (mode === 'grid') {
     const n = order.length, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols), sp = 5.4;
     order.forEach((c, i) => { c.rel = null; c.tScale = c.vdepth ? .7 : 1; c.home.set((i % cols - (cols - 1) / 2) * sp, 0, ((i / cols | 0) - (rows - 1) / 2) * sp); }); return;
   }
   const ring = (c, depth, spin) => {
-    c.tScale = SC[Math.min(depth, 3)]; const ks = kids(c); if (!ks.length) return 1.9 * c.tScale;
+    c.tScale = SC[Math.min(depth, 3)] * weightF(c); const ks = kids(c); if (!ks.length) return 1.9 * c.tScale;
     const foot = 5.2 * SC[Math.min(depth + 1, 3)]; let placed = 0, r = 0, R = 0;
     while (placed < ks.length) { R = r ? R + foot * 1.2 : 3.1 * c.tScale + foot;
       const m = Math.min(Math.max(1, Math.floor(2 * Math.PI * R / foot)), ks.length - placed);
@@ -97,6 +102,7 @@ function layoutCore(resetManual) {
   const river = S.space === 'vivo' && !S.enter && (mode === 'cluster' || mode === 'orbit');
   if (river) riverLayout(cores);
   else if (cores.length > 4 && mode !== 'stack') { // each top-level cube keeps its slot on the circle; newcomers take free slots
+    [...cores].sort((a, b) => (GEM_ORDER[a.gem] ?? 9) - (GEM_ORDER[b.gem] ?? 9) || a.seq - b.seq).forEach((c, i) => { c.ring = i; }); // neighbours by gem: code, data, documents, executables, folders
     const used = new Set(); for (const c of cores) if (c.ring != null && !used.has(c.ring)) used.add(c.ring); else c.ring = null;
     for (const c of cores) if (c.ring == null) { let i = 0; while (used.has(i)) i++; c.ring = i; used.add(i); }
     const cap = Math.max(8, Math.ceil((Math.max(...used) + 1) / 4) * 4), ext = Math.max(2.4, ...cores.map(c => c._ext)), need = Math.max(9, cap * (2 * ext + 3.5) / (2 * Math.PI));
@@ -134,6 +140,7 @@ function syncGhosts(mem) {
 }
 // Personal space and gravity: each cube occupies its real volume (larger when open or exploded). Overlapping cubes are pushed apart horizontally, heavier ones move less; the selected, dragged or hand-placed cube stays put. Gravity eases them back when there is room.
 function spaceBodies(dt) {
+  if (S.enter) { for (const c of S.cubes.values()) c.off.multiplyScalar(.8); return; } // inside a cube the grid already keeps everything apart
   const B = [], decay = Math.pow(.8, dt), soft = Math.min(1, dt * 6);
   for (const c of S.vorder || []) { if (c.vis === false || c.s < .1 || c.leaving) continue; const ex = 1 + .9 * c.ex;
     B.push({ o: c, r: 1.5 * c.s * ex, h: 1.46 * c.s * ex, y: c.pos.y, m: c === S.sel || c === drag || c.manual ? Infinity : Math.pow(c.s * ex, 3) }); }

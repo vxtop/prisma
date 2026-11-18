@@ -6,8 +6,8 @@
 // === Data ===
 let layT = 0;
 // kind of each cube, from its contents (server template) and location; shown on the lid emblem and in the tint
-const KINDS = { unidad: ['#8fa6b8', '◉', 'Unidad'], ia: ['#e8a33d', '✦', 'Trabajado con IA'], codigo: ['#62b37f', '</>', 'Proyecto de código'], medios: ['#a983d6', '▶', 'Medios'],
-  sistema: ['#8d9aa6', '⚙', 'Sistema'], app: ['#5b93cc', '▣', 'Datos de programas'], temporal: ['#7b8489', '◷', 'Temporal o caché'], descargas: ['#4fb3ad', '↓', 'Descargas'], usuario: ['#cdb27a', '★', 'Carpeta personal'] };
+const KINDS = { unidad: ['#AEB9C5', '◉', 'Unidad'], ia: ['#D97757', '✦', 'Trabajado con IA'], codigo: ['#5aa2ea', '</>', 'Proyecto de código'], medios: ['#E6B844', '▶', 'Medios'],
+  sistema: ['#8b95a3', '⚙', 'Sistema'], app: ['#269B65', '▣', 'Datos de programas'], temporal: ['#6a7381', '◷', 'Temporal o caché'], descargas: ['#7fb8ef', '↓', 'Descargas'], usuario: ['#F0EBDD', '★', 'Carpeta personal'] };
 function cubeKind(c) { const p = K(c.path).replace(/\//g, '\\'), t = c.data && c.data.preset ? c.data.preset.types.map(x => x[0]) : [];
   if (t.includes('unidad') || /^[a-z]:\\?$/.test(p)) return 'unidad'; if (t.includes('ia') || /\\\.claude(\\|$)/.test(p)) return 'ia';
   if (t.some(x => ['node', 'python', 'rust', 'go', 'git'].includes(x))) return 'codigo'; if (t.includes('medios')) return 'medios';
@@ -15,22 +15,35 @@ function cubeKind(c) { const p = K(c.path).replace(/\//g, '\\'), t = c.data && c
   if (/^[a-z]:\\(windows|program files( \(x86\))?|programdata|\$recycle\.bin|system volume information)(\\|$)/.test(p)) return 'sistema';
   if (/\\appdata\\|\\\.config(\\|$)/.test(p)) return 'app'; if (/\\(downloads|descargas)(\\|$)/.test(p)) return 'descargas';
   if (/\\(desktop|escritorio|documents|documentos|pictures|imágenes|music|música|videos|vídeos|onedrive)(\\|$)/.test(p)) return 'usuario'; return null; }
+const EXE_EXT = new Set('exe dll msi sys com scr appx msix msixbundle cpl ocx drv efi lnk bat cmd ps1'.split(' '));
+/** One gem per cube: what the folder is (project, media, drive) or else what fills it, by bytes. */
+function cubeGem(c) {
+  const k = cubeKind(c), d = c.data;
+  if (k === 'codigo') return 'code'; if (k === 'medios') return 'docs'; if (k === 'unidad' || !d || !d.totals || !d.totals.files) return 'folder';
+  const w = { code: 0, data: 0, docs: 0, exe: 0 };
+  for (const x of d.exts || []) { const e = String(x.ext || '').toLowerCase(); w[EXE_EXT.has(e) ? 'exe' : CODE.has(e) ? 'code' : DATA.has(e) ? 'data' : 'docs'] += x.bytes || 1; }
+  let best = 'folder', bw = 0; for (const g in w) if (w[g] > bw) { bw = w[g]; best = g; } return best;
+}
 const kindTex = new Map();
 function kindTexOf(k) { if (kindTex.has(k)) return kindTex.get(k); const [col, g] = KINDS[k], cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d');
   x.fillStyle = 'rgba(12,16,18,.92)'; x.strokeStyle = col; x.lineWidth = 7; x.beginPath(); x.roundRect(8, 8, 112, 112, 22); x.fill(); x.stroke();
   x.fillStyle = col; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = `700 ${g.length > 1 ? 44 : 64}px "Segoe UI Symbol","Segoe UI",sans-serif`; x.fillText(g, 64, 68);
   const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; kindTex.set(k, tx); return tx; }
-const kindCol = new THREE.Color();
 // focus: with something selected, unrelated cubes and labels are dimmed
 const related = (c, sel) => !sel || c === sel || (c.parent && K(c.parent) === sel.key) || (sel.parent && K(sel.parent) === c.key) || S.multi.has(c.key);
 function dimOne(c) { if (!c.cc0) return; const f = VIEW.cur === 'espacio' && S.sel && !related(c, S.sel) ? .22 : 1; if (c.dimF === f) return; c.dimF = f; c.cellDirty = c.colDirty = true; for (let i = 0; i < 81; i++) CC[c.slot * 81 + i] = c.cc0[i] * f; cellsIM.instanceColor.addUpdateRange(c.slot * 81, 81); cellsIM.instanceColor.needsUpdate = true; if (c.label) c.label.material.opacity = f < 1 ? 0 : 1; if (c.emb) c.emb.material.opacity = f < 1 ? .15 : 1; }
 function dimFocus() { for (const c of S.cubes.values()) dimOne(c); }
-function applyKind(c) { const k = cubeKind(c); if (k === c.kind && c.emb && c.kindData === !!c.data) return; c.kindData = !!c.data; c.kind = k;
-  kindCol.set(k ? KINDS[k][0] : '#000000'); const a = k ? .055 : 0;
-  for (let i = 0; i < 27; i++) { const o = (c.slot * 27 + i) * 3, t = TYPE_COL[i % 3], e = c.data && c.data.cells[i] && !c.data.cells[i].files ? .5 : 1; CC[o] = (.05 + t.r * .03 + kindCol.r * a) * e; CC[o+1] = (.055 + t.g * .03 + kindCol.g * a) * e; CC[o+2] = (.062 + t.b * .03 + kindCol.b * a) * e; } /* empty cells: same size, dimmer */
+function applyKind(c) { const k = cubeKind(c), g = cubeGem(c); if (k === c.kind && g === c.gem && c.emb && c.kindData === !!c.data) return; c.kindData = !!c.data; c.kind = k; c.gem = g;
+  gemBody(c);
   c.cc0 = CC.slice(c.slot * 81, c.slot * 81 + 81); dimOne(c); cellsIM.instanceColor.addUpdateRange(c.slot * 81, 81); cellsIM.instanceColor.needsUpdate = true;
   if (!c.emb) { c.emb = new THREE.Mesh(scrGeo, new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })); c.emb.renderOrder = 2; scene.add(c.emb); }
   c.emb.material.map = k ? kindTexOf(k) : null; c.emb.material.needsUpdate = true; c.emb.visible = !!k; drawLabel(c); }
+/** The 27 cells share the cube's gem as a dark polished metal; empty cells keep their size but sink into shadow. */
+function gemBody(c) {
+  const col = GEM[c.gem || 'folder'][0];
+  for (let i = 0; i < 27; i++) { const o = (c.slot * 27 + i) * 3, cd = c.data && c.data.cells[i], e = cd && !cd.files ? .45 : 1;
+    CC[o] = (.012 + col.r * .13) * e; CC[o+1] = (.012 + col.g * .13) * e; CC[o+2] = (.014 + col.b * .13) * e; }
+}
 function applyScan(c, d) {
   c.data = d; c.lastScan = Date.now(); c.evCount = Math.max(c.evCount, d.events || 0);
   const max = Math.max(1, ...d.cells.map(x => x.bytes)); d.cells.forEach((x, i) => c.heat[i] = x.bytes > 0 ? .25 + .75 * Math.log(1 + x.bytes) / Math.log(1 + max) : 0);
@@ -70,6 +83,7 @@ function fitAll() {
   const pts = []; if (VIEW.cur === 'arbol') { for (const n of TR.list) pts.push(n.tgt.clone().addScalar(n.ts), n.tgt.clone().subScalar(n.ts)); }
   else if (VIEW.cur === 'sistema') { for (const nd of G.nodes.values()) pts.push(nd.tgt); }
   else if (VIEW.cur === 'tareas') { for (const z of TKS.zones) pts.push(new THREE.Vector3(z.c.x - ZW / 2, 0, z.c.z - ZD / 2), new THREE.Vector3(z.c.x + ZW / 2, 5, z.c.z + ZD / 2)); }
+  else if (S.enter && inFrame()) pts.push(...inFrame());
   else { for (const c of S.cubes.values()) { const p = (c.manual || (c.rel ? c.pos : c.home)).clone().add(c.off); pts.push(p.clone().addScalar(1.6 * c.tScale), p.clone().subScalar(1.6 * c.tScale)); } OB.list.forEach(o => pts.push(o.pos)); }
   if (!pts.length) return; const { ctr: c0, d, dir } = fitPts(pts); const sph = { center: c0 };
   if (d * 1.4 > 420 || VIEW.cur === 'arbol') { controls.maxDistance = Math.max(420, d * 1.4); camera.far = Math.max(700, d * 2.6); camera.updateProjectionMatrix(); } // a large tree needs more distance than the Space view
@@ -107,8 +121,10 @@ let feedDirty = false;
 function actorOf(abs, t) { const a = K(abs); for (const pr of S.sessions.values()) { if (!pr.meta) continue; for (const e of pr.meta.trace) if (e.abs && K(e.abs) === a && Math.abs(t - e.t) < 15000) return 'Claude'; } return null; }
 const byYou = m => { if (!S.fg || !m.who) return null; const pids = [...String(m.who).matchAll(/#(\d+)/g)].map(x => +x[1]); if (pids.includes(S.fg.pid) || (S.fg.cur && pids.includes(S.fg.cur.pid))) return 'tú · ' + fgName(pids.includes(S.fg.pid) ? S.fg : S.fg.cur); return null; }; // done by the program you are using
 function onFs(m) {
-  const c = S.cubes.get(K(m.root)); if (!c) return; m.by = m.by || actorOf(trimSep(c.path) + SEP(c.path) + m.file, m.t); if (m.by === 'vxtop') { c.evCount++; c.lastEv = m.t; if (deepestCube(trimSep(c.path) + SEP(c.path) + m.file) !== c) return; return feed('vxtop lee', '#5d666c', `${c.name}/${m.file.split(/[\\/]/).slice(-2).join('/')}`); }
+  const c = S.cubes.get(K(m.root)); if (!c) return; m.by = m.by || actorOf(trimSep(c.path) + SEP(c.path) + m.file, m.t); if (m.by === 'prisma') { c.evCount++; c.lastEv = m.t; if (deepestCube(trimSep(c.path) + SEP(c.path) + m.file) !== c) return; return feed('Prisma lee', '#5b6370', `${c.name}/${m.file.split(/[\\/]/).slice(-2).join('/')}`); }
   c.evCount++; c.lastEv = m.t; c.events.unshift(m); c.events.length = Math.min(c.events.length, 30);
+  inFsEvent(c, m); // inside its glass case, the file itself is born, changes or dies
+  if (deepestCube(trimSep(c.path) + SEP(c.path) + m.file) === c || c.vis !== false) { const rdv = m.type === 'acceso'; c.pulse[13] = Math.max(c.pulse[13], rdv ? .25 : .9); c.flashC = m.type === 'creado' ? IN_BORN : m.type === 'borrado' ? IN_DEAD : rdv ? null : IN_TOUCH; c.cellDirty = true; } // the whole body flashes: emerald created, ruby deleted, pearl changed
   const rd = m.type === 'acceso'; if (m.cell != null) { c.pulse[m.cell] = Math.max(c.pulse[m.cell], rd ? .35 : 1); if (((m.cell / 3 | 0) % 3) === 2) c.deepT = Date.now(); } c.cellDirty = true;
   const k = c.slotOf.get(K(m.file)); if (k != null) flashVox(c, k, rd ? .5 : .9, rd ? FL_RD : FL_FS);
   if (S.space === 'vivo' && VIEW.cur === 'espacio' && c.vis !== false) { const dst = k != null ? voxWorld(c, k, new THREE.Vector3()) : m.cell != null ? cellWorld(c, m.cell, new THREE.Vector3()) : c.pos.clone();
@@ -121,11 +137,11 @@ function onFs(m) {
   const par = c.parent && S.cubes.get(K(c.parent));
   followFs(m, c);
   const tmpN = /(^|[\\/])(temp|tmp|cache|caches|gpucache|code cache|crashpad)([\\/]|$)|\.(tmp|temp|lock|log|etl|journal)$|~$/i.test(m.file) || /[\\/]temp$/i.test(c.path);
-  const you = !m.by && byYou(m); if (!tmpN && (c.depth === 0 || !par)) { const parts = m.file.split(/[\\/]/); feed((m.by ? m.by + ' ' : you ? you + ' ' : '') + m.type, m.by ? '#e8a33d' : you ? '#7fd6cf' : rd ? '#8a9399' : '#4fb3ad', `${c.name.replace(/[\\/]+$/, '')}/${parts.length > 3 ? '…/' + parts.slice(-2).join('/') : parts.join('/')}${m.who && !m.by ? ' · ' + m.who : ''}`); }
+  const you = !m.by && byYou(m); if (!tmpN && (c.depth === 0 || !par)) { const parts = m.file.split(/[\\/]/); feed((m.by ? m.by + ' ' : you ? you + ' ' : '') + m.type, m.by ? '#D97757' : you ? '#F0EBDD' : rd ? '#8b95a3' : '#1768B5', `${c.name.replace(/[\\/]+$/, '')}/${parts.length > 3 ? '…/' + parts.slice(-2).join('/') : parts.join('/')}${m.who && !m.by ? ' · ' + m.who : ''}`); }
   if (!c.rt) c.rt = setTimeout(() => { c.rt = null; scanCube(c); }, 2500);
 }
-const YOU_COL = new THREE.Color(.5, 1.6, 1.5), OTHER_COL = new THREE.Color(.55, .7, .9); // particles: you (turquoise) and other programs (bluish grey); Claude uses AMB_AI
-const FL_RD = new THREE.Color(.9, 1.1, 1.2), FL_AI = new THREE.Color(2.4, 1.35, .38), FL_W = new THREE.Color(2.8, 2.1, 1.2), FL_FS = new THREE.Color(1.3, 2.2, 2.1), FS_COL = new THREE.Color(.25, .75, .7);
+const YOU_COL = new THREE.Color(1.6, 1.5, 1.3), OTHER_COL = new THREE.Color(.72, .78, .86); // particles: you (pearl) and other programs (silver); Claude uses AMB_AI
+const FL_RD = new THREE.Color(.9, 1.1, 1.2), FL_AI = new THREE.Color(2.5, 1.3, .9), FL_W = new THREE.Color(2.8, 2.1, 1.2), FL_FS = new THREE.Color(.45, 1.15, 2.4), FS_COL = new THREE.Color(.25, .75, .7);
 function flashVox(c, k, h, col) { c.vheat[k] = Math.max(c.vheat[k], h); c.vfl[k*3] = col.r; c.vfl[k*3+1] = col.g; c.vfl[k*3+2] = col.b; c.colDirty = true; }
 
 // --- System, processes, agent ---
@@ -191,10 +207,10 @@ async function pollPulse() {
 const FWA = new Map(), FWA_IDLE = 20000; let fwOpenT = 0; // folder -> { path, t, ops }
 function followOpen(e) { const dir = e.dir ? e.abs : e.abs.replace(/[\\/][^\\/]*$/, ''), k = K(dir); if (!dir) return; const now = Date.now(), a = FWA.get(k);
   if (a) { a.t = now; a.ops++; return; } if (S.cubes.has(k) || now - fwOpenT < 1500) return;
-  fwOpenT = now; FWA.set(k, { path: dir, t: now, ops: 1, born: now }); post('/api/open', { path: dir, here: true, root: true, quiet: true }).then(() => feed('sigue IA', '#e8a33d', 'abre ' + base(dir))).catch(() => FWA.delete(k)); }
+  fwOpenT = now; FWA.set(k, { path: dir, t: now, ops: 1, born: now }); post('/api/open', { path: dir, here: true, root: true, quiet: true }).then(() => feed('sigue IA', '#D97757', 'abre ' + base(dir))).catch(() => FWA.delete(k)); }
 function followTouch(e) { if (!e.abs) return; const a = K(e.abs); for (const [k, v] of FWA) if (a === k || under(a, k)) v.t = Date.now(); }
 setInterval(() => { const now = Date.now(); for (const [k, v] of FWA) { const c = S.cubes.get(k); if (!c) { if (now - v.born > 15000) FWA.delete(k); continue; } // closed by someone else
-    if (now - v.t > FWA_IDLE && c !== S.sel) { FWA.delete(k); post('/api/close', { path: v.path }).then(() => feed('sigue IA', '#8a9399', 'cierra ' + base(v.path) + ' (sin uso)')).catch(() => {}); } } }, 3000);
+    if (now - v.t > FWA_IDLE && c !== S.sel) { FWA.delete(k); post('/api/close', { path: v.path }).then(() => feed('sigue IA', '#8b95a3', 'cierra ' + base(v.path) + ' (sin uso)')).catch(() => {}); } } }, 3000);
 // "Seguir IA" camera: each frame, to the exact point of every active session (the file's slot, not the cube center)
 const fwp = document.createElement('div'); fwp.id = 'fwpanel'; document.body.appendChild(fwp); let fwpKey = '';
 function renderFollowPanel() { const on = S.follow && VIEW.cur === 'espacio' && !VW.o; fwp.style.display = on ? 'block' : 'none'; if (!on) return; const now = Date.now();

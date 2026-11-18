@@ -2,7 +2,7 @@
 
 > [README](../README.md) · [Guía](guia.md) · [Architecture (EN)](architecture.md)
 
-vxtop es una aplicación web local: un servidor Node.js que **lee** el equipo y un cliente three.js que lo dibuja. Sin dependencias de npm y sin paso de compilación.
+Prisma es una aplicación web local: un servidor Node.js que **lee** el equipo y un cliente three.js que lo dibuja. Sin dependencias de npm y sin paso de compilación.
 
 ```
 ┌─────────── navegador (127.0.0.1) ───────────┐        ┌──────────────── server.js ────────────────┐
@@ -23,7 +23,7 @@ vxtop es una aplicación web local: un servidor Node.js que **lee** el equipo y 
 |---|---|
 | CLI y HTTP | Opciones, servidor solo en bucle local, comprobación de token y origen, ficheros estáticos y el paquete del cliente |
 | Escaneo | Una carpeta se convierte en cubo: 27 celdas = tipo de archivo (código · datos · documentos) × profundidad (raíz · 1–2 · 3+) × antigüedad (< 1 h · < 24 h · más), con un límite de tiempo y de entradas |
-| Índices | `indexer.js` corre en un hilo *worker* y escribe índices JSON comprimidos con gzip en `~/.vxtop/index`; los vigilantes los mantienen al día |
+| Índices | `indexer.js` corre en un hilo *worker* y escribe índices JSON comprimidos con gzip en `~/.prisma/index`; los vigilantes los mantienen al día |
 | En vivo | Los vigilantes de las unidades, las sesiones de IA (`~/.claude*`), los programas abiertos y sus rutas se agrupan en el espacio *En vivo*; las carpetas se desvanecen 8 s después de su último evento |
 | Sistema | Procesos, conexiones de red, GPU (`nvidia-smi`), tareas, servicios y programas de inicio, todo de solo lectura |
 | Ayudante nativo | `pshost.ps1` se queda en marcha y responde en líneas JSON: quién tiene un archivo abierto (Restart Manager), ventana en primer plano y cursor, miniaturas de ventanas (`PrintWindow`), iconos, datos de GPU y de tareas |
@@ -61,7 +61,7 @@ El renderizado usa `InstancedMesh`: todas las celdas de todos los cubos se dibuj
 
 ## Datos en disco
 
-Solo `~/.vxtop`: `index/` (índices de unidades), `scenes/` y `token` (puerto → token, con permisos `0600`). En Windows el lanzador usa además `%LOCALAPPDATA%\vxtop` para su log y un perfil de Chrome aparte.
+Solo `~/.prisma`: `index/` (índices de unidades), `scenes/` y `token` (puerto → token, con permisos `0600`). En Windows el lanzador usa además `%LOCALAPPDATA%\prisma` para su log y un perfil de Chrome aparte.
 
 ## Pruebas
 

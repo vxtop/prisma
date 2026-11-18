@@ -2,7 +2,7 @@
 // Copyright 2026 virtuanista
 //
 // Hover preview: live windows, recent files and open files for the cube under the cursor;
-// also exposes test hooks on window.__vxtop.
+// also exposes test hooks on window.__prisma.
 // === Hover Preview ===
 // Folder cube: live windows of programs using it, recently touched files and files a program has open.
 // Program cube: its live window and what it touched last. Images/videos are shown; text shows its first lines. Hides when the cursor leaves.
@@ -57,4 +57,4 @@ function peekTick() {
   /* above the cube (the cursor tip goes below); to the side if it doesn't fit */ let px = x - w / 2, py = y - h - 70; if (py < 60) { py = Math.max(60, Math.min(innerHeight - 70 - h, y - h / 2)); px = x + 110; if (px + w > Rm) px = x - 110 - w; } px = Math.max(Lm, Math.min(Rm - w, px));
   pkEl.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
 }
-window.__vxtop = S; S.pickAt = (x, y) => { const m = pick({ clientX: x, clientY: y }); return m ? (m.c ? m.c.key : m.tn ? m.tn.key : m.node ? m.node.id : m.o ? "obj" : m.task ? "task" : null) : (pickLP(x, y) ? "lp" : null); }; /* test hook: what is under a point */ S.TR = TR; S.trOpen = trOpen; S.openObject = openObject; S.trToggle = trToggle; S.trLevels = trLevels; S.camera = camera; S.controls = controls; S.fitAll = () => fitAll(); S.enterCube = (...a) => enterCube(...a); S.leaveLevel = () => leaveLevel(); S.openObject = openObject; S.setView = setView; S.G = G; S.OB = OB; S.TKS = TKS; S.selectTask = it => selectTask(it); S.LP = LP; S.GH = GH; S.selectNode = n => selectNode(n); S.selectLP = o => selectLP(o);
+window.__prisma = S; S.pickAt = (x, y) => { const m = pick({ clientX: x, clientY: y }); return m ? (m.c ? m.c.key : m.tn ? m.tn.key : m.node ? m.node.id : m.o ? "obj" : m.task ? "task" : null) : (pickLP(x, y) ? "lp" : null); }; /* test hook: what is under a point */ S.TR = TR; S.trOpen = trOpen; S.openObject = openObject; S.trToggle = trToggle; S.trLevels = trLevels; S.camera = camera; S.controls = controls; S.fitAll = () => fitAll(); S.enterCube = (...a) => enterCube(...a); S.leaveLevel = () => leaveLevel(); S.openObject = openObject; S.setView = setView; S.G = G; S.OB = OB; S.TKS = TKS; S.selectTask = it => selectTask(it); S.LP = LP; S.GH = GH; S.selectNode = n => selectNode(n); S.selectLP = o => selectLP(o);

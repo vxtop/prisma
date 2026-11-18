@@ -1,19 +1,19 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' Copyright 2026 virtuanista
 '
-' vxtop launcher for Windows: no console window.
-' 1) If the server is not answering, start it hidden (no admin) with its log in %LOCALAPPDATA%\vxtop\servidor.log.
+' prisma launcher for Windows: no console window.
+' 1) If the server is not answering, start it hidden (no admin) with its log in %LOCALAPPDATA%\prisma\servidor.log.
 '    --with-window: it lives while the app window is open and everything exits when it closes.
-' 2) Open vxtop in its own Chrome app window and profile, as the normal user.
+' 2) Open prisma in its own Chrome app window and profile, as the normal user.
 Option Explicit
 Dim sh, fso, app, root, port, url, dataDir, logf, i, chrome, cands, c, profile
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set app = CreateObject("Shell.Application")
 root = fso.GetParentFolderName(WScript.ScriptFullName)
-port = "4827"
+port = "4828"
 url = "http://127.0.0.1:" & port & "/"
-dataDir = sh.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\vxtop"
+dataDir = sh.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\prisma"
 If Not fso.FolderExists(dataDir) Then fso.CreateFolder dataDir
 logf = dataDir & "\servidor.log"
 profile = dataDir & "\chrome"
@@ -34,7 +34,7 @@ End Function
 
 If Not Vivo(1500) Then
   If sh.Run("cmd /c where node", 0, True) <> 0 Then
-    MsgBox "No se encuentra Node.js en el PATH. Instala Node 18 o superior.", vbExclamation, "vxtop"
+    MsgBox "No se encuentra Node.js en el PATH. Instala Node 18 o superior.", vbExclamation, "prisma"
     WScript.Quit 1
   End If
   ' hidden cmd (0); node inherits its hidden console and writes to the log
@@ -44,7 +44,7 @@ If Not Vivo(1500) Then
     WScript.Sleep 800
   Next
   If i > 50 Then
-    MsgBox "El servidor no responde en " & url & vbCrLf & "Mira el registro: " & logf, vbExclamation, "vxtop"
+    MsgBox "El servidor no responde en " & url & vbCrLf & "Mira el registro: " & logf, vbExclamation, "prisma"
     WScript.Quit 1
   End If
 End If
@@ -59,5 +59,5 @@ Next
 If chrome = "" Then
   sh.Run url, 1, False
 Else
-  sh.Run """" & chrome & """ --app=" & url & " --user-data-dir=""" & profile & """ --window-size=1680,1000 --window-position=60,30 --force-dark-mode --no-first-run --no-default-browser-check --hide-crash-restore-bubble --disable-features=Translate,MediaRouter --class=vxtop", 1, False
+  sh.Run """" & chrome & """ --app=" & url & " --user-data-dir=""" & profile & """ --window-size=1680,1000 --window-position=60,30 --force-dark-mode --no-first-run --no-default-browser-check --hide-crash-restore-bubble --disable-features=Translate,MediaRouter --class=prisma", 1, False
 End If

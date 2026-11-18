@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 virtuanista
 #
-# vxtop native Windows helper: one persistent PowerShell process.
+# Prisma native Windows helper: one persistent PowerShell process.
 # Reads one JSON request per line on stdin and answers one JSON line {id, r} or {id, e}.
 # Windows APIs only (Restart Manager, DNS cache, process modules, PrintWindow); read-only, it never acts on a process.
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -12,7 +12,7 @@ Add-Type -Language CSharp -ReferencedAssemblies System.Drawing -TypeDefinition @
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
-public static class VxtopNative {
+public static class PrismaNative {
   [StructLayout(LayoutKind.Sequential)] struct RM_UNIQUE_PROCESS { public int dwProcessId; public System.Runtime.InteropServices.ComTypes.FILETIME ProcessStartTime; }
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] struct RM_PROCESS_INFO {
     public RM_UNIQUE_PROCESS Process;
@@ -74,14 +74,14 @@ while ($true) {
   try {
     switch ($q.op) {
       'ping'    { $out.r = 'ok' }
-      'who'     { $out.r = @(foreach ($f in @($q.files)) { @{ f = $f; p = [VxtopNative]::Who($f) } }) }
+      'who'     { $out.r = @(foreach ($f in @($q.files)) { @{ f = $f; p = [PrismaNative]::Who($f) } }) }
       'recent'  { $sh = New-Object -ComObject WScript.Shell; $d = [Environment]::GetFolderPath('Recent'); $out.r = @(Get-ChildItem $d -Filter *.lnk -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 30 | ForEach-Object { try { @{ t = $sh.CreateShortcut($_.FullName).TargetPath; m = $_.LastWriteTime.ToString('o') } } catch {} }) }
       'dns'     { $out.r = @(Get-DnsClientCache -ErrorAction SilentlyContinue | Where-Object { $_.Type -eq 1 -or $_.Type -eq 28 } | ForEach-Object { @{ n = $_.Entry; ip = $_.Data } }) }
       'proc'    {
         $p = Get-Process -Id ([int]$q.pid)
         $mods = @(); try { $mods = @($p.Modules | Sort-Object ModuleMemorySize -Descending | Select-Object -First 60 | ForEach-Object { @{ n = $_.ModuleName; f = $_.FileName; s = $_.ModuleMemorySize } }) } catch {}
         $st = $null; try { $st = $p.StartTime.ToString('o') } catch {}
-        $gui = ''; try { $gui = [VxtopNative]::Gui([int]$q.pid) } catch {}
+        $gui = ''; try { $gui = [PrismaNative]::Gui([int]$q.pid) } catch {}
         $th = @(); try { $th = @($p.Threads | Select-Object -First 256 | ForEach-Object { $c = $null; try { $c = [int64]$_.TotalProcessorTime.TotalMilliseconds } catch {}; $w = ''; if ("$($_.ThreadState)" -eq 'Wait') { $w = "$($_.WaitReason)" }; @{ id = $_.Id; s = "$($_.ThreadState)"; w = $w; c = $c; pr = $_.CurrentPriority } }) } catch {}
         $out.r = @{ gui = $gui; thl = $th; start = $st; threads = $p.Threads.Count; handles = $p.HandleCount; priv = $p.PrivateMemorySize64; paged = $p.PagedMemorySize64; virt = $p.VirtualMemorySize64; peak = $p.PeakWorkingSet64;
                     company = $p.Company; desc = $p.Description; ver = $p.ProductVersion; prio = "$($p.PriorityClass)"; responding = $p.Responding; modules = $mods }
@@ -105,9 +105,9 @@ while ($true) {
         $w = @(); try { foreach ($x in (New-Object -ComObject Shell.Application).Windows()) { try { $d = $x.Document; $f = $d.Folder.Self.Path; if (-not $f) { continue }
           $sel = @(); try { $sel = @($d.SelectedItems() | Select-Object -First 200 | ForEach-Object { $_.Path }) } catch {}; $w += @{ f = $f; s = $sel } } catch {} } } catch {}
         $out.r = $w }
-      'fg'      { $out.r = [VxtopNative]::Fg2() }
-      'shot'    { $out.r = [VxtopNative]::Shot([int]$q.w) }
-      'shotpid' { $out.r = [VxtopNative]::ShotPids([string]$q.pids, [int]$q.w) }
+      'fg'      { $out.r = [PrismaNative]::Fg2() }
+      'shot'    { $out.r = [PrismaNative]::Shot([int]$q.w) }
+      'shotpid' { $out.r = [PrismaNative]::ShotPids([string]$q.pids, [int]$q.w) }
       'admin'   { $out.r = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) }
       default   { $out.e = 'operación desconocida' }
     }

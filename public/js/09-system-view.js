@@ -7,15 +7,15 @@
 const G = { openG: new Set(), open: new Set(), fitted: false, nodes: new Map(), edges: [], data: null, sel: null, hover: null, polling: false };
 const egGeo = new THREE.BufferGeometry(); egGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(4000 * 6), 3).setUsage(THREE.DynamicDrawUsage)); egGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(4000 * 6), 3).setUsage(THREE.DynamicDrawUsage));
 const sysEdges = new THREE.LineSegments(egGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: .9, depthWrite: false, toneMapped: false })); sysEdges.frustumCulled = false; scene.add(sysEdges);
-const SCREENS = new Map(), GRAPHITE = new THREE.Color('#1c2226');
+const SCREENS = new Map(), GRAPHITE = new THREE.Color('#252B35');
 function procCat(name, kind) { const n = String(name || '').toLowerCase();
-  if (kind === 'claude' || /claude|copilot|cursor|chatgpt|ollama|codex/.test(n)) return ['ia', '#e8a33d'];
-  if (/^(cmd|powershell|pwsh|bash|sh|zsh|wsl|conhost|openconsole|windowsterminal|termius|wezterm)/.test(n)) return ['term', '#aeb6bd'];
-  if (/chrome|msedge|firefox|brave|opera|vivaldi/.test(n)) return ['web', '#6f8fb3'];
-  if (/^(node|python|java|dotnet|deno|bun|ruby|php|uv|uvx)/.test(n)) return ['run', '#7fb069'];
-  if (/league|riot|steam|epic|game|blitz|valorant|battle/.test(n)) return ['game', '#c98a6b'];
-  if (/svchost|services|lsass|csrss|wininit|winlogon|dwm|msmpeng|system|wmi|spool|search|runtimebroker|dllhost|sihost|ctfmon|fontdrv|registry|smss|audiodg|nvidia|nv/.test(n)) return ['sys', '#8a9399'];
-  return ['app', '#4fb3ad']; }
+  if (kind === 'claude' || /claude|copilot|cursor|chatgpt|ollama|codex/.test(n)) return ['ia', '#D97757'];
+  if (/^(cmd|powershell|pwsh|bash|sh|zsh|wsl|conhost|openconsole|windowsterminal|termius|wezterm)/.test(n)) return ['term', '#AEB9C5'];
+  if (/chrome|msedge|firefox|brave|opera|vivaldi/.test(n)) return ['web', '#269B65'];
+  if (/^(node|python|java|dotnet|deno|bun|ruby|php|uv|uvx)/.test(n)) return ['run', '#269B65'];
+  if (/league|riot|steam|epic|game|blitz|valorant|battle/.test(n)) return ['game', '#E6B844'];
+  if (/svchost|services|lsass|csrss|wininit|winlogon|dwm|msmpeng|system|wmi|spool|search|runtimebroker|dllhost|sihost|ctfmon|fontdrv|registry|smss|audiodg|nvidia|nv/.test(n)) return ['sys', '#8b95a3'];
+  return ['app', '#1768B5']; }
 function glyph(g, cat, col) { // hand-drawn glyphs on a 128×128 canvas
   g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
   if (cat === 'term') { g.moveTo(38, 48); g.lineTo(58, 64); g.lineTo(38, 80); g.moveTo(66, 84); g.lineTo(92, 84); }
@@ -33,7 +33,7 @@ function screenFor(n) { // real system icon on a dark screen; falls back to the 
   base(); glyph(g, cat, col); tex.needsUpdate = true; SCREENS.set(key, tex);
   if (ip && (!S.platform || S.platform === 'win32')) { const im = new Image(); im.onload = () => { base(); g.imageSmoothingQuality = 'high'; g.drawImage(im, 24, 24, 80, 80); tex.needsUpdate = true; }; im.src = iconURL(ip); }
   return tex; }
-const NODE_COL = { claude: '#e8a33d', 'claude-app': '#e8a33d', editor: '#4f8fd0', terminal: '#aeb6bd', shell: '#7cc4bd', node: '#7fb069', app: '#aeb6bd', proc: '#5d666c', group: '#5d666c', 'group-root': '#4fb3ad', net: '#4fb3ad', core: '#eef1f3' };
+const NODE_COL = { claude: '#D97757', 'claude-app': '#D97757', editor: '#4f8fd0', terminal: '#AEB9C5', shell: '#7cc4bd', node: '#269B65', app: '#AEB9C5', proc: '#5b6370', group: '#5b6370', 'group-root': '#1768B5', net: '#1768B5', core: '#F0EBDD' };
 const KIND_ES = { claude: 'sesión de Claude Code', 'claude-app': 'Claude (escritorio)', editor: 'editor', terminal: 'terminal', shell: 'intérprete de órdenes', node: 'Node.js', app: 'aplicación', proc: 'proceso', group: 'grupo de procesos', 'group-root': 'servicios', net: 'equipo remoto', core: 'equipo' };
 function makeNode(n, id) {
   const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: n.kind === 'net' || n.kind === 'core' ? glowTex : screenFor(n), color: n.kind === 'net' ? new THREE.Color(.35, 1.1, 1.05) : n.kind === 'core' ? new THREE.Color(2, 2, 2) : 0xffffff, transparent: true, depthWrite: false, toneMapped: n.kind !== 'net' && n.kind !== 'core', blending: n.kind === 'net' || n.kind === 'core' ? THREE.AdditiveBlending : THREE.NormalBlending }));
@@ -116,16 +116,16 @@ function stepSystem(dt) {
     const isCube = nd.n.kind !== 'net' && nd.n.kind !== 'core', E = s * 1.05 * (.7 + .5 * Math.min(1, Math.sqrt((nd.n.ws || 0) / 2e9))); // edge length: memory
     nd.icon.position.copy(nd.pos); if (isCube) nd.icon.position.y += E * .5 + s * .2; nd.icon.scale.setScalar(s * (nd.n.kind === 'net' ? 1 : isCube ? .36 : .62));
     if (isCube && sn < SYSMAX) { const sp = E / 3, heat = Math.min(1, (nd.n.cpu || 0) / 40), lit = (nd.n.cpu || 0) > .5 ? Math.max(1, Math.round(heat * 27)) : 0, dim = sel ? 1.7 : hov ? 1.35 : 1; scol.set(NODE_COL[nd.n.kind] || '#888');
-      for (let q = 0; q < 27; q++) { const b = BASE[q], j = sn * 27 + q, on2 = UPORDER.indexOf(q) < lit, f = on2 ? 1.15 : .32; setM(SA, j, nd.pos.x + b[0] * sp, nd.pos.y + b[1] * sp, nd.pos.z + b[2] * sp, sp * .9, sp * .9, sp * .9);
+      { const j = sn, f = Math.min(1.15, .32 + heat * .8); setM(SA, j, nd.pos.x, nd.pos.y, nd.pos.z, E * .97, E * .97, E * .97); // one cube per process: edge = memory, brightness = CPU
         SC[j * 3] = (GRAPHITE.r * (1 - f * .6) + scol.r * f * .6) * dim; SC[j * 3 + 1] = (GRAPHITE.g * (1 - f * .6) + scol.g * f * .6) * dim; SC[j * 3 + 2] = (GRAPHITE.b * (1 - f * .6) + scol.b * f * .6) * dim; } sn++; }
     const want = sel || hov || (SET.labels && nd.labelOn);
     if (want) { const key = nodeName(nd.n) + '|' + (nd.n.kind === 'net' ? nd.n.count : fmtB(nd.n.ws) + nd.n.cpu);
       if (!nd.label) { nd.label = textSprite(768, 112); nd.label.material.sizeAttenuation = false; nd.label.center.set(.5, 0); scene.add(nd.label); }
-      if (nd.labelKey !== key) { nd.labelKey = key; drawText(nd.label, [[nodeName(nd.n).slice(0, 48), 38, nd.n.kind === 'claude' ? '#e8a33d' : 'rgba(238,241,243,.9)', 40], [nd.n.kind === 'net' ? `${nd.n.count} conexión${nd.n.count > 1 ? 'es' : ''}` : nd.n.kind === 'core' ? `${G.data ? G.data.procs : '…'} procesos · ${G.data ? G.data.conns : '…'} conexiones` : `${fmtB(nd.n.ws)} · ${cpuEq(nd.n.cpu)} % CPU${nd.n.net && nd.n.net.length ? ' · ' + nd.n.net.length + ' con.' : ''}`, 31, 'rgba(176,188,196,.85)', 86]]); }
+      if (nd.labelKey !== key) { nd.labelKey = key; drawText(nd.label, [[nodeName(nd.n).slice(0, 48), 38, nd.n.kind === 'claude' ? '#D97757' : 'rgba(240,235,221,.9)', 40], [nd.n.kind === 'net' ? `${nd.n.count} conexión${nd.n.count > 1 ? 'es' : ''}` : nd.n.kind === 'core' ? `${G.data ? G.data.procs : '…'} procesos · ${G.data ? G.data.conns : '…'} conexiones` : `${fmtB(nd.n.ws)} · ${cpuEq(nd.n.cpu)} % CPU${nd.n.net && nd.n.net.length ? ' · ' + nd.n.net.length + ' con.' : ''}`, 31, 'rgba(176,188,196,.85)', 86]]); }
       nd.label.visible = true; nd.label.position.set(nd.pos.x, nd.pos.y + s * .55 + (nd.n.kind !== 'net' && nd.n.kind !== 'core' ? s * .3 : 0), nd.pos.z); const lh = sel || hov ? 54 : nd.depth === 0 || nd.n.kind === 'core' ? 46 : 38; nd.label.scale.set(pxScale(lh) * 768 / 112, pxScale(lh), 1);
     } else if (nd.label) nd.label.visible = false;
   }
-  sysCells.count = sn * 27; sysCells.instanceMatrix.needsUpdate = true; sysCells.instanceColor.needsUpdate = true;
+  sysCells.count = sn; sysCells.instanceMatrix.needsUpdate = true; sysCells.instanceColor.needsUpdate = true;
   const P = egGeo.attributes.position.array, C = egGeo.attributes.color.array; let m = 0;
   for (const [a, b, kind] of G.edges) { const A = G.nodes.get(a), B = G.nodes.get(b); if (!A || !B || m >= 4000) continue; const c = EC[kind] || EC.tree, on = (G.sel && (G.sel === A || G.sel === B)) || (G.hover && (G.hover === A || G.hover === B)), hl = on ? (kind === 'net' ? 4.5 : 2.4) : kind === 'net' ? .18 : 1; /* network lines stay faint until you point at one of their ends: no hairball */
     P.set([A.pos.x, A.pos.y, A.pos.z, B.pos.x, B.pos.y, B.pos.z], m * 6); C.set([c[0] * hl, c[1] * hl, c[2] * hl, c[0] * hl, c[1] * hl, c[2] * hl], m * 6); m++; }

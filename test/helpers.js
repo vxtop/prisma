@@ -17,7 +17,7 @@ function freePort() {
 
 /** Builds a small project-like tree: ten folders with code, docs, data and images. */
 function makeFixture() {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'vxtop-test-')), home = path.join(base, 'home'), work = path.join(base, 'work');
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'prisma-test-')), home = path.join(base, 'home'), work = path.join(base, 'work');
   fs.mkdirSync(home); fs.mkdirSync(work);
   const png = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000' + '1f15c4890000000d49444154789c6360f8cfc0f01f0005fe02fea7d6a3d40000000049454e44ae426082', 'hex');
   const names = ['app', 'docs', 'assets', 'scripts', 'data', 'tests', 'config', 'notes', 'media', 'tools'];
@@ -40,7 +40,7 @@ async function startServer({ dirs = [], home, live = false, extra = [] }) {
   let log = ''; proc.stdout.on('data', d => { log += d; }); proc.stderr.on('data', d => { log += d; });
   const url = `http://127.0.0.1:${port}/`;
   for (let i = 0; i < 60; i++) {
-    try { const r = await fetch(url); if (r.ok) { const html = await r.text(), token = (/name="vxtop" content="([^"]+)"/.exec(html) || [])[1]; return { proc, port, url, token, log: () => log, stop: () => proc.kill() }; } } catch {}
+    try { const r = await fetch(url); if (r.ok) { const html = await r.text(), token = (/name="prisma" content="([^"]+)"/.exec(html) || [])[1]; return { proc, port, url, token, log: () => log, stop: () => proc.kill() }; } } catch {}
     await new Promise(r => setTimeout(r, 250));
   }
   proc.kill(); throw new Error('server did not start:\n' + log);

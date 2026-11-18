@@ -1,6 +1,6 @@
 ---
 name: Proponer una idea
-about: Una idea para que vxtop sea más útil
+about: Una idea para que Prisma sea más útil
 labels: enhancement
 ---
 
@@ -8,4 +8,4 @@ labels: enhancement
 
 **¿Por qué es importante para ti?**
 
-Recuerda: vxtop solo observa. Las ideas que cambian archivos, procesos o el sistema quedan fuera de su alcance.
+Recuerda: Prisma solo observa. Las ideas que cambian archivos, procesos o el sistema quedan fuera de su alcance.

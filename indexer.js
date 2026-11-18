@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 virtuanista
 //
-// vxtop background indexer (worker_threads); read-only: readdir + stat. Walks a whole tree (e.g. C:\) and stores, per folder,
+// Prisma background indexer (worker_threads); read-only: readdir + stat. Walks a whole tree (e.g. C:\) and stores, per folder,
 // its direct files in 9 groups (type x age): 18 numbers per folder. Subtree totals and the 27 cells of any cube are derived from these later.
 'use strict';
 const { workerData, parentPort } = require('worker_threads');

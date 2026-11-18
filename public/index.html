@@ -4,9 +4,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>vxtop</title>
+<title>Prisma</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="vxtop" content="__VXTOP_TOKEN__">
+<meta name="prisma" content="__PRISMA_TOKEN__">
 <link rel="stylesheet" href="/app.css">
 <script type="importmap">
 { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
@@ -49,7 +49,7 @@
 <canvas id="hud2"></canvas><div id="dock"></div>
 
 <div id="top">
-  <span id="brand"><img src="/favicon.svg" alt="">VXTOP</span><span class="badge" data-tip="Monitor de solo lectura|No crea, modifica ni borra archivos y no actúa sobre procesos ni sobre el sistema.">SOLO LECTURA</span>
+  <span id="brand"><img src="/favicon.svg" alt="">PRISMA</span><span class="badge" data-tip="Monitor de solo lectura|No crea, modifica ni borra archivos y no actúa sobre procesos ni sobre el sistema.">SOLO LECTURA</span>
   <div class="sep"></div>
   <div class="seg" id="view"><button data-v="espacio" class="on" data-tip="Espacio de directorios|Cada carpeta abierta es un cubo." data-key="V"><svg class="i"><use href="#i-space"/></svg><span class="tl">Espacio</span></button><button data-v="sistema" data-tip="Vista Sistema|Aplicaciones, terminales, procesos y conexiones." data-key="V"><svg class="i"><use href="#i-system"/></svg><span class="tl">Sistema</span></button><button data-v="tareas" data-tip="Tareas|El administrador de tareas en 3D: aplicaciones, segundo plano, Windows, rendimiento, red, archivos en uso, servicios, inicio y usuarios. Solo lectura." data-key="T"><svg class="i"><use href="#i-grid"/></svg><span class="tl">Tareas</span></button><button data-v="arbol" data-tip="Árbol|Como «tree»: cada carpeta y sus subcarpetas, cada una con su cubo ligero. Doble clic despliega o contrae; miles de carpetas a la vez." data-key="A"><svg class="i"><use href="#i-tree"/></svg><span class="tl">Árbol</span></button></div>
   <div class="sep"></div>
@@ -74,11 +74,11 @@
 
 <div id="left" class="panel">
   <h2>Capas del sistema</h2>
-  <div class="layer" style="--k:#e8a33d" data-tip="Agentes de IA|Sesiones de Claude Code de todas las cuentas del equipo."><div class="lh"><i>5</i><b>Agentes</b><span id="L5">—</span></div><div id="L5s"></div></div>
-  <div class="layer" style="--k:#aeb6bd" data-tip="Versiones|Estado de git del cubo seleccionado."><div class="lh"><i>4</i><b>Versiones</b><span id="L4">—</span></div><div class="ll" id="L4a"></div></div>
-  <div class="layer" style="--k:#4fb3ad" data-tip="Archivos|Totales de los cubos abiertos y eventos de disco."><div class="lh"><i>3</i><b>Archivos</b><span id="L3">—</span></div><div class="ll" id="L3a"></div><div class="ll" id="L3b"></div></div>
-  <div class="layer" style="--k:#aeb6bd" data-tip="Procesos|Número de procesos, E/S de disco total y el que más CPU usa."><div class="lh"><i>2</i><b>Procesos</b><span id="L2">—</span></div><div class="ll" id="L2a"></div><div class="ll" id="L2b"></div></div>
-  <div class="layer" style="--k:#aeb6bd"><div class="lh"><i>1</i><b>Hardware</b><span id="L1">—</span></div>
+  <div class="layer" style="--k:#D97757" data-tip="Agentes de IA|Sesiones de Claude Code de todas las cuentas del equipo."><div class="lh"><i>5</i><b>Agentes</b><span id="L5">—</span></div><div id="L5s"></div></div>
+  <div class="layer" style="--k:#AEB9C5" data-tip="Versiones|Estado de git del cubo seleccionado."><div class="lh"><i>4</i><b>Versiones</b><span id="L4">—</span></div><div class="ll" id="L4a"></div></div>
+  <div class="layer" style="--k:#1768B5" data-tip="Archivos|Totales de los cubos abiertos y eventos de disco."><div class="lh"><i>3</i><b>Archivos</b><span id="L3">—</span></div><div class="ll" id="L3a"></div><div class="ll" id="L3b"></div></div>
+  <div class="layer" style="--k:#AEB9C5" data-tip="Procesos|Número de procesos, E/S de disco total y el que más CPU usa."><div class="lh"><i>2</i><b>Procesos</b><span id="L2">—</span></div><div class="ll" id="L2a"></div><div class="ll" id="L2b"></div></div>
+  <div class="layer" style="--k:#AEB9C5"><div class="lh"><i>1</i><b>Hardware</b><span id="L1">—</span></div>
     <div class="hw">
       <span>CPU</span><div class="bar"><i id="h-cpu"></i></div><span id="v-cpu">—</span>
       <span>RAM</span><div class="bar"><i id="h-ram"></i></div><span id="v-ram">—</span>
@@ -101,9 +101,13 @@
 </div>
 
 <div id="vbar" class="panel"></div>
+<div id="asst" class="panel" aria-label="Claude">
+  <div id="asst-log" role="log" aria-live="polite"></div>
+  <form id="asst-bar" autocomplete="off"><span id="asst-orb" aria-hidden="true"></span><input id="asst-in" placeholder="Pídele algo a Claude: «enséñame qué ocupa más en Descargas»…" spellcheck="false" data-tip="Claude|Le hablas aquí y lo que mira aparece en el espacio. Solo observa: no cambia nada del equipo. Ctrl+K para escribir."><button type="button" id="asst-mode" data-tip="Modo|Observar: Claude solo mira el equipo. Trabajar: Claude puede editar los ficheros de la carpeta seleccionada (nunca ejecuta programas).">Observar</button><button type="button" id="asst-perm" hidden data-tip="Permisos|Preguntar: cada edición espera tu visto bueno, con el cambio a la vista. Aceptar ediciones: Claude edita sin preguntar. Planificar: Claude solo lee y propone un plan.">Preguntar</button><button type="button" id="asst-acc" data-tip="Cuenta de Claude|Elige con qué cuenta de Claude Code habla."></button><button type="button" id="asst-new" data-tip="Conversación nueva">Nueva</button><button type="submit" id="asst-go">Enviar</button></form>
+</div>
 <div id="ticker" class="panel"><span class="lab">En vivo</span><div id="feed"></div><span id="fps"></span></div>
 <div id="trbar"><svg class="i"><use href="#i-tree"/></svg><b id="trname">Árbol</b><span id="trinfo"></span><span class="trs"></span><span class="trl">Niveles</span><div class="seg"><button data-lv="1" data-tip="Como tree -L 1|Abierto hasta 1 nivel desde la raíz.">1</button><button data-lv="2" data-tip="Como tree -L 2|Abierto hasta 2 niveles desde la raíz.">2</button><button data-lv="3" data-tip="Como tree -L 3|Abierto hasta 3 niveles desde la raíz.">3</button><button data-lv="4" data-tip="Como tree -L 4|Abierto hasta 4 niveles desde la raíz.">4</button><button data-lv="5" data-tip="Como tree -L 5|Abierto hasta 5 niveles desde la raíz.">5</button><button data-lv="6" data-tip="Como tree -L 6|Abierto hasta 6 niveles desde la raíz.">6</button></div><button data-tb="all" data-tip="Desplegar todo|Hasta 12 niveles, con el tope de carpetas.">Todo</button><button data-tb="none" data-tip="Contraer todo|Solo la raíz y sus subcarpetas.">Contraer</button><button data-tb="up" data-tip="Subir|La carpeta superior pasa a ser la raíz.">Subir</button><span class="trs"></span><div class="seg"><button data-tm="plano" data-tip="Plano|Como tree: cada nivel una fila más atrás.">Plano</button><button data-tm="radial" data-tip="Radial|La raíz en el centro y cada nivel un anillo.">Radial</button></div><button data-tb="fit" data-tip="Encuadrar el árbol" data-key="H">Encuadrar</button></div>
-<div id="empty"><b>No hay nada abierto</b><p>Escribe una ruta arriba, usa el <u data-e="ex">explorador</u> o empieza por:</p><div id="emptyq"></div><p class="hint">Pulsa <kbd>?</kbd> para ver los controles · <kbd>V</kbd> cambia a la vista Sistema</p></div>
+<div id="empty"><b>No hay nada abierto</b><p>Pídele algo a Claude en la barra de abajo, escribe una ruta arriba, usa el <u data-e="ex">explorador</u> o empieza por:</p><div id="emptyq"></div><p class="hint">Pulsa <kbd>?</kbd> para ver los controles · <kbd>V</kbd> cambia a la vista Sistema</p></div>
 <div id="tip"></div><div id="ctx"></div><div id="set" class="panel pop"></div><div id="fade"></div><div id="scn" class="panel pop"></div><div id="help" class="panel pop"></div><div id="modal"></div>
 
 <script type="module" src="/app.js"></script>

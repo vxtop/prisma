@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 virtuanista
 //
-// vxtop: a 3D observatory of directories, one OLAP cube (27 cells, 6 faces) per directory.
+// prisma: a 3D observatory of directories, one OLAP cube (27 cells, 6 faces) per directory.
 // Strictly read-only: it never creates, modifies or deletes anything it observes (readdir/stat/watch, partial reads,
 // `git --no-optional-locks`). Workspace state lives in memory only. No dependencies; listens on 127.0.0.1 only.
 'use strict';
 process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '16'; // more parallel disk I/O for the indexer
 const http = require('http'), fs = require('fs'), fsp = fs.promises, path = require('path'), os = require('os');
 const { execFile, spawn } = require('child_process');
+const assistant = require('./assistant');
 
 // --- CLI ---
-const flags = { port: +process.env.VXTOP_PORT || 4827 }, cliDirs = [];
+const flags = { port: +process.env.PRISMA_PORT || 4828 }, cliDirs = [];
 for (let a = process.argv.slice(2), i = 0; i < a.length; i++) {
   if (a[i] === '--port') flags.port = +a[++i];
   else if (a[i] === '--no-open') flags.noOpen = true;
@@ -19,12 +20,13 @@ for (let a = process.argv.slice(2), i = 0; i < a.length; i++) {
   else if (a[i] === '--no-live') flags.noLive = true;
   else if (a[i] === '--idle-exit' || a[i] === '--with-window') flags.idleExit = true;
   else if (a[i] === '--takeover') flags.takeover = true;
+  else if (a[i] === '--dev') flags.dev = true; // development: reload the page when public/ changes (scripts/dev.js restarts the server)
   else if (a[i] === '--demo') flags.demo = true; // screenshots and demos: never show the real foreground window or cursor
   else if (a[i] === '-h' || a[i] === '--help') flags.help = true;
   else cliDirs.push(a[i]);
 }
 if (flags.help) {
-  console.log('Uso: vxtop [directorio ...] [--expand] [--port 4827] [--no-open] [--no-live] [--with-window]\n  --expand   despliega también los subdirectorios como cubos\n  --no-live  sin el espacio «En vivo» (no vigila las unidades)\n  --with-window  vive mientras la ventana de vxtop esté abierta: al cerrarla se cierra todo (lo usa vxtop.vbs)\n  Sin directorio se abre el actual. Solo lectura: nunca modifica lo observado.');
+  console.log('Uso: prisma [directorio ...] [--expand] [--port 4828] [--no-open] [--no-live] [--with-window]\n  --expand   despliega también los subdirectorios como cubos\n  --no-live  sin el espacio «En vivo» (no vigila las unidades)\n  --with-window  vive mientras la ventana de Prisma esté abierta: al cerrarla se cierra todo (lo usa prisma.vbs)\n  Sin directorio se abre el actual. Solo lectura: nunca modifica lo observado.');
   process.exit(0);
 }
 const PORT = flags.port, WIN = process.platform === 'win32';
@@ -240,9 +242,9 @@ async function deps(root) {
 
 // --- Persistent index for huge trees (a whole C:\) ---
 // A worker walks the tree; per-folder totals are kept here so cubes and sizes are computed instantly.
-// The index is stored in ~/.vxtop/index (outside anything observed) and kept current from disk events.
+// The index is stored in ~/.prisma/index (outside anything observed) and kept current from disk events.
 const { Worker } = require('worker_threads'), zlib = require('zlib');
-const SIMDIR = path.join(os.homedir(), '.vxtop'), IXDIR = path.join(SIMDIR, 'index'), indexes = new Map();
+const SIMDIR = path.join(os.homedir(), '.prisma'), IXDIR = path.join(SIMDIR, 'index'), indexes = new Map();
 // earlier versions (named SIMULA) kept their data in ~/.simula: move it once
 try { const old = path.join(os.homedir(), '.simula'); if (fs.existsSync(old)) { fs.mkdirSync(SIMDIR, { recursive: true }); for (const n of fs.readdirSync(old)) if (!fs.existsSync(path.join(SIMDIR, n))) fs.renameSync(path.join(old, n), path.join(SIMDIR, n)); if (!fs.readdirSync(old).length) fs.rmdirSync(old); } } catch {}
 const ixPublic = ix => ({ root: ix.root, state: ix.state, dirs: ix.dirs, files: ix.files, bytes: ix.bytes, errors: ix.errors, at: ix.at, ms: ix.ms, cur: ix.cur, err: ix.err });
@@ -441,6 +443,13 @@ function useSpace(id) { const sp = spaces.get(id); if (!sp) throw new Error('No 
 ws = newSpace('En vivo', true);
 const clients = new Set(), watchers = new Map(), evCount = new Map();
 const send = obj => { const line = `data: ${JSON.stringify(obj)}\n\n`; for (const c of clients) c.write(line); };
+if (flags.dev) { // hot reload of the client: styles are swapped in place, anything else reloads the page
+  let pending = null, cssOnly = true;
+  fs.watch(path.join(__dirname, 'public'), { recursive: true }, (_e, name) => {
+    if (!name) return; cssOnly = cssOnly && /\.css$/i.test(name); clearTimeout(pending);
+    pending = setTimeout(() => { send({ k: 'reload', css: cssOnly }); cssOnly = true; }, 150);
+  });
+}
 const selfReads = new Map(); const selfRead = p => { selfReads.set(key(p), Date.now()); if (selfReads.size > 5000) for (const [k, t] of selfReads) if (Date.now() - t > 15000) selfReads.delete(k); };
 const srcHash = () => { try { return require('crypto').createHash('sha1').update(fs.readFileSync(path.join(__dirname, 'server.js'))).update(fs.readFileSync(path.join(__dirname, 'pshost.ps1'))).digest('hex').slice(0, 10); } catch { return ''; } }, SRC = srcHash();
 const BOOT = require('crypto').randomBytes(6).toString('hex'); // identifies this run: if it changes, the page reloads (new token)
@@ -524,7 +533,7 @@ function syncWatchers() {
             const rel = path.relative(cu.path, abs); evCount.set(key(cu.path), (evCount.get(key(cu.path)) || 0) + 1);
             // content unchanged (old mtime) means a mere access: Windows updates the last-access time on read
             const kind = e ? 'borrado' : type === 'rename' ? 'creado' : now - st.mtimeMs > 3000 ? 'acceso' : 'escrito', mine = kind === 'acceso' && now - (selfReads.get(key(abs)) || 0) < 15000;
-            send({ k: 'fs', root: cu.path, file: rel, type: kind, by: mine ? 'vxtop' : null, who, cell: e ? null : cellOf(rel, st.mtimeMs, now), size: e ? 0 : st.size, t: now });
+            send({ k: 'fs', root: cu.path, file: rel, type: kind, by: mine ? 'prisma' : null, who, cell: e ? null : cellOf(rel, st.mtimeMs, now), size: e ? 0 : st.size, t: now });
           }
           });
         });
@@ -534,7 +543,7 @@ function syncWatchers() {
   }
 }
 
-// compact view for an AI: everything vxtop is observing
+// compact view for an AI: everything Prisma is observing
 async function observe() {
   const cubes = [];
   for (const c of ws.cubes.values()) {
@@ -552,7 +561,7 @@ async function observe() {
 }
 
 // --- Explorer and objects (read-only) ---
-// vxtop is a monitor: no route acts on processes, files or the system.
+// Prisma is a monitor: no route acts on processes, files or the system.
 const TOKEN = require('crypto').randomBytes(18).toString('hex'); // handed to the page on load; guards file reads
 const KIND = { image: 'png jpg jpeg gif webp bmp ico svg avif tif tiff', video: 'mp4 webm mov mkv avi m4v ogv', audio: 'mp3 wav ogg flac m4a aac opus weba',
   doc: 'md txt pdf rtf doc docx odt log', archive: 'zip rar 7z tar gz tgz bz2 xz', exe: 'exe dll msi sys com so dylib app apk bin', font: 'ttf otf woff woff2', model3d: 'glb gltf obj fbx stl blend ai psd' };
@@ -872,7 +881,7 @@ async function follow(pidIn) {
   let files = null; if (!WIN) { const out = await run('lsof', ['-Fn', '-p', [...pids].slice(0, 40).join(',')]); files = [...new Set(out.split('\n').filter(l => l[0] === 'n' && l[1] === '/').map(l => l.slice(1)))].slice(0, 300); }
   return { pid, t: Date.now(), procs: tree.map(p => ({ pid: p.pid, ppid: p.ppid, name: p.name, cmd: mask(p.cmd).slice(0, 200), ws: p.ws, cpu: +p.cpu.toFixed(1), io: Math.round(p.rd + p.wr + p.ot) })), net, modules, files };
 }
-// scenes: what's open (cubes, objects, camera, space) saved by name in ~/.vxtop/escenas.json
+// scenes: what's open (cubes, objects, camera, space) saved by name in ~/.prisma/escenas.json
 const SCENES = path.join(SIMDIR, 'escenas.json');
 async function scenes() { try { return JSON.parse(await fsp.readFile(SCENES, 'utf8')); } catch { return {}; } }
 async function sceneOp(b, by) {
@@ -898,7 +907,7 @@ function ixNewDir(abs) {
 // Sources: disk activity on every drive, what AIs touch, open programs (and paths in their command lines),
 // downloads and Windows recent items. Grouped by project root and turned into cubes.
 const LIVE = { fg: null, allMap: new Map(), mem: [], ring: [], dirs: new Map(), procs: [], drives: new Map(), stale: new Map(), hidden: new Map(), budget: { s: 0, n: 0 }, aiSeen: new Set(), on: !flags.noLive };
-const LIVE_IGNORE = /[\\/](\$recycle\.bin|system volume information|config\.msi|windows[\\/](winsxs|servicing|prefetch|temp|logs|softwaredistribution|system32[\\/](winevt|logfiles|wdi|sru|tasks))|programdata[\\/](microsoft[\\/](windows[\\/](wer|caches)|diagnosis|search)|nvidia)|appdata[\\/]local[\\/](temp|packages|microsoft[\\/]windows[\\/](inetcache|explorer|webcache|notifications)|crashdumps|d3dscache)|[^\\/]*cache[^\\/]*|\.git[\\/](objects|logs)|node_modules[\\/]\.(cache|vite)|\.vxtop|microsoft[\\/]windows[\\/]recent|windows[\\/]microsoft\.net|sentry|crashpad|logs?|user data[\\/][^\\/]+[\\/](network|sessions|session storage|local storage|indexeddb|service worker|shared proto db|segmentation platform|feature engagement tracker|sync data|extension state|blob_storage))([\\/]|$)/i;
+const LIVE_IGNORE = /[\\/](\$recycle\.bin|system volume information|config\.msi|windows[\\/](winsxs|servicing|prefetch|temp|logs|softwaredistribution|system32[\\/](winevt|logfiles|wdi|sru|tasks))|programdata[\\/](microsoft[\\/](windows[\\/](wer|caches)|diagnosis|search)|nvidia)|appdata[\\/]local[\\/](temp|packages|microsoft[\\/]windows[\\/](inetcache|explorer|webcache|notifications)|crashdumps|d3dscache)|[^\\/]*cache[^\\/]*|\.git[\\/](objects|logs)|node_modules[\\/]\.(cache|vite)|\.prisma|microsoft[\\/]windows[\\/]recent|windows[\\/]microsoft\.net|sentry|crashpad|logs?|user data[\\/][^\\/]+[\\/](network|sessions|session storage|local storage|indexeddb|service worker|shared proto db|segmentation platform|feature engagement tracker|sync data|extension state|blob_storage))([\\/]|$)/i;
 const HALF = 20000; // live: activity loses half its weight every 20 s (what is happening now, not what happened)
 function liveTouch(dir, src, file, w = 1) {
   if (!dir || LIVE_IGNORE.test(dir + path.sep)) return; const k = key(dir), now = Date.now(); let d = LIVE.dirs.get(k);
@@ -1062,7 +1071,7 @@ async function search(qIn) {
 }
 // Drag from Explorer: the browser only hands over names (and the names of their contents), never the path.
 // Each item is located by searching: first the selection in open Explorer windows, then the folders they show,
-// common folders, drives, what is open in vxtop, recent items and the indexes. Read-only.
+// common folders, drives, what is open in Prisma, recent items and the indexes. Read-only.
 // lowercase name -> index folders with that name; built once per index version
 function ixNameIds(ix, k) { if (!ix.byName || ix.byName.at !== ix.at) { const m = new Map(); for (let i = 1; i < ix.names.length; i++) { const kk = key(ix.names[i]); const a = m.get(kk); if (a) { if (a.length < 40) a.push(i); } else m.set(kk, [i]); } ix.byName = { at: ix.at, m }; } return ix.byName.m.get(k) || []; }
 async function resolveDrop(items) {
@@ -1122,12 +1131,16 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       const o = req.headers.origin;
       if (o && o !== `http://127.0.0.1:${PORT}` && o !== `http://localhost:${PORT}`) { res.writeHead(403); return res.end(); }
-      if (req.headers['x-vxtop'] !== TOKEN) { res.writeHead(403); return res.end(); }
+      if (req.headers['x-prisma'] !== TOKEN) { res.writeHead(403); return res.end(); }
       const b = await body(req), by = b.by === 'ia' ? 'ia' : 'usuario';
       if (u.pathname === '/api/space') return json(res, 200, spaceOp(b, by));
+      if (u.pathname === '/api/assistant/ask') { await assistant.ask({ message: b.message, account: b.account, fresh: !!b.fresh, workdir: b.workdir || null, permission: b.permission, port: PORT }, send); return json(res, 202, { ok: true }); }
+      if (u.pathname === '/api/assistant/permission') return json(res, 200, await assistant.requestPermission({ account: String(b.account || 'default'), tool: String(b.tool || ''), input: b.input || {} })); // long wait: answered when the user decides
+      if (u.pathname === '/api/assistant/decide') return json(res, 200, { ok: assistant.decide(String(b.id), !!b.allow, b.message) });
+      if (u.pathname === '/api/assistant/cancel') return json(res, 200, { cancelled: assistant.cancel(String(b.account || 'default')) });
       if (u.pathname === '/api/elevate') { // relaunch this same server with administrator rights (Windows asks for consent); still read-only
       if (!WIN || ADMIN) return json(res, 400, { error: 'ya tiene permisos de administrador' });
-      const q1 = s => "'" + String(s).replace(/'/g, "''") + "'", log = path.join(process.env.LOCALAPPDATA || os.tmpdir(), 'vxtop', 'servidor.log');
+      const q1 = s => "'" + String(s).replace(/'/g, "''") + "'", log = path.join(process.env.LOCALAPPDATA || os.tmpdir(), 'prisma', 'servidor.log');
       const inner = `/c cd /d "${__dirname}" && "${process.execPath}" "${path.join(__dirname, 'server.js')}" --no-open --takeover --port ${PORT}${flags.idleExit ? ' --with-window' : ''}${flags.noLive ? ' --no-live' : ''} > "${log}" 2>&1`;
       const ok = await new Promise(r => execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command', `Start-Process -FilePath cmd.exe -ArgumentList ${q1(inner)} -Verb RunAs -WindowStyle Hidden`], { windowsHide: true, timeout: 120000 }, e => r(!e)));
       if (!ok) return json(res, 409, { error: 'permiso denegado' });
@@ -1145,13 +1158,15 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(404); return res.end();
     }
     if (u.pathname === '/api/version') return json(res, 200, { running: SRC, disk: srcHash() });
+    if (u.pathname === '/api/assistant') return json(res, 200, await assistant.status());
+    if (u.pathname === '/api/assistant/busy') return json(res, 200, { busy: assistant.isBusy() });
     if (u.pathname === '/app.js' || u.pathname === '/app.js.map') { const b = clientBundle(); const map = u.pathname.endsWith('.map'); res.writeHead(200, { 'Content-Type': map ? 'application/json' : 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(map ? b.map : b.code); }
     if (u.pathname === '/favicon.svg') { res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=3600' }); return res.end(fs.readFileSync(path.join(__dirname, 'public', 'favicon.svg'))); }
     if (u.pathname === '/app.css') { res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(fs.readFileSync(path.join(__dirname, 'public', 'css', 'app.css'))); }
-    if (u.pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8').replace('__VXTOP_TOKEN__', TOKEN)); }
-    // every /api request requires the token handed to the page itself (or to the local MCP via ~/.vxtop/token),
+    if (u.pathname === '/') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8').replace('__PRISMA_TOKEN__', TOKEN)); }
+    // every /api request requires the token handed to the page itself (or to the local MCP via ~/.prisma/token),
     // so no external website can trigger reads, scans or indexing even though it can't see the response
-    if (u.pathname.startsWith('/api/') && !['/api/state', '/api/events'].includes(u.pathname) && q('t') !== TOKEN && req.headers['x-vxtop'] !== TOKEN) { res.writeHead(403); return res.end(); }
+    if (u.pathname.startsWith('/api/') && !['/api/state', '/api/events'].includes(u.pathname) && q('t') !== TOKEN && req.headers['x-prisma'] !== TOKEN) { res.writeHead(403); return res.end(); }
     if (u.pathname === '/api/roots') return json(res, 200, await roots());
     if (u.pathname === '/api/ls') return json(res, 200, await ls(q('path')));
     if (u.pathname === '/api/file') return json(res, 200, await fileInfo(q('path')));
@@ -1208,13 +1223,14 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', async () => {
-  try { const tf = path.join(os.homedir(), '.vxtop', 'token'); fs.mkdirSync(path.dirname(tf), { recursive: true }); let o = {}; try { o = JSON.parse(fs.readFileSync(tf, 'utf8')); } catch {} const ports = { ...(o.ports || {}), [PORT]: TOKEN }; // one token per port so several instances don't clobber each other
-    fs.writeFileSync(tf, JSON.stringify({ port: PORT, token: PORT === 4827 ? TOKEN : (ports[4827] || TOKEN), ports }), { mode: 0o600 }); } catch {}
+  try { const tf = path.join(os.homedir(), '.prisma', 'token'); fs.mkdirSync(path.dirname(tf), { recursive: true }); let o = {}; try { o = JSON.parse(fs.readFileSync(tf, 'utf8')); } catch {} const ports = { ...(o.ports || {}), [PORT]: TOKEN }; // one token per port so several instances don't clobber each other
+    fs.writeFileSync(tf, JSON.stringify({ port: PORT, token: PORT === 4828 ? TOKEN : (ports[4828] || TOKEN), ports }), { mode: 0o600 }); } catch {}
   await loadIndexes();
   const url = `http://127.0.0.1:${PORT}/`;
   if (cliDirs.length) { useSpace(newSpace(path.basename(path.resolve(cliDirs[0]))).id); for (const d of cliDirs) { try { await openCube(path.resolve(d), { expand: !!flags.expand, here: true }); } catch (e) { console.error('  ! ' + e.message); } } }
   else if (!LIVE.on) { useSpace(newSpace(path.basename(process.cwd())).id); try { await openCube(process.cwd(), { here: true }); } catch {} }
-  console.log(`vxtop  →  ${url}   (solo lectura · ${ws.cubes.size} cubos)`);
+  else useSpace(newSpace().id); // start on an empty space; «En vivo» stays one tab away
+  console.log(`prisma  →  ${url}   (solo lectura · ${ws.cubes.size} cubos)`);
   if (!flags.noOpen) { try { (WIN ? spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore', windowsHide: true }) : spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { detached: true, stdio: 'ignore' })).unref(); } catch {} }
 });
 setInterval(() => {
@@ -1224,14 +1240,20 @@ setInterval(() => {
   for (const k of evCount.keys()) if (!open.has(k)) evCount.delete(k);
   if (rdns.size > 5000) rdns.clear(); if (icons.size > 3000) icons.clear(); if (pulseFiles.size > 64) pulseFiles.clear();
 }, 60000).unref();
-// started by vxtop.vbs (--with-window): lives with its window; once it closes (8 s grace for reloads) it exits along with its helpers
+// started by prisma.vbs (--with-window): lives with its window; once it closes (8 s grace for reloads) it exits along with its helpers
 let hadClient = false;
-function shutdown(why) { console.log(why + ': vxtop se cierra.'); try { if (psh) psh.kill(); } catch {} for (const w of watchers.values()) { try { w.close(); } catch {} } process.exit(0); }
+function shutdown(why) { console.log(why + ': Prisma se cierra.'); assistant.stopAll(); try { if (psh) psh.kill(); } catch {} for (const w of watchers.values()) { try { w.close(); } catch {} } process.exit(0); }
 if (flags.idleExit) setInterval(() => { if (clients.size) { hadClient = true; return; } if (picking || manyBusy) return;
   const idle = Date.now() - lastReq; if (hadClient ? idle > 8000 : idle > 120000) shutdown(hadClient ? 'Ventana cerrada' : 'Sin uso en 2 min'); }, 2000).unref();
+// scripts/dev.js asks for a clean stop over IPC before restarting, so helpers never outlive the server
+if (process.send) {
+  process.on('message', m => { if (m === 'shutdown') shutdown('Reinicio de desarrollo'); });
+  process.on('disconnect', () => shutdown('El proceso de desarrollo se cerró')); // the runner died: do not stay behind as an orphan
+}
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => shutdown('Señal ' + sig));
 // a monitor must not crash on a one-off failure: log it and keep observing
 process.on('uncaughtException', e => console.error('  ! error:', e && e.message));
 process.on('unhandledRejection', e => console.error('  ! promesa rechazada:', e && e.message));
 let bindTries = 0;
 server.on('error', e => { if (e.code === 'EADDRINUSE' && flags.takeover && ++bindTries < 60) return setTimeout(() => server.listen(PORT, '127.0.0.1'), 500); // relaunched with admin: wait for the previous server to leave
-  console.error(e.code === 'EADDRINUSE' ? `El puerto ${PORT} ya está en uso (¿vxtop ya está abierto?). Usa --port.` : e.message); process.exit(1); });
+  console.error(e.code === 'EADDRINUSE' ? `El puerto ${PORT} ya está en uso (¿Prisma ya está abierto?). Usa --port.` : e.message); process.exit(1); });

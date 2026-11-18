@@ -8,7 +8,7 @@ const canvas = $('#gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
 let DPR = Math.min(devicePixelRatio, 1.5); renderer.setPixelRatio(DPR);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-const scene = new THREE.Scene(); scene.background = new THREE.Color(0x030405); scene.fog = new THREE.FogExp2(0x030405, .011);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0b0d11); scene.fog = new THREE.FogExp2(0x0b0d11, .011);
 const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 700); camera.position.set(12, 9, 20);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = .085; controls.minDistance = 2; controls.maxDistance = 420; controls.rotateSpeed = .7; controls.panSpeed = .9; controls.zoomSpeed = 1;
@@ -23,7 +23,7 @@ scene.add(new THREE.HemisphereLight(0x1c2a30, 0x050505, .55));
 const rim = new THREE.DirectionalLight(0x7ec4c8, .45); rim.position.set(-12, 7, -14); scene.add(rim); // rim light: separates cubes from the background
 const FLOOR = -3.6;
 const hovGeo = new THREE.BufferGeometry(); hovGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(48 * 3), 3));
-const hovBr = new THREE.LineSegments(hovGeo, new THREE.LineBasicMaterial({ color: 0x4fb3ad, transparent: true, opacity: .9, depthWrite: false })); hovBr.frustumCulled = false; scene.add(hovBr);
+const hovBr = new THREE.LineSegments(hovGeo, new THREE.LineBasicMaterial({ color: 0x1768b5, transparent: true, opacity: .9, depthWrite: false })); hovBr.frustumCulled = false; scene.add(hovBr);
 { // data dust
   const n = 1400, pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { pos[i*3] = (Math.random() - .5) * 200; pos[i*3+1] = Math.random() * 60 - 8; pos[i*3+2] = (Math.random() - .5) * 200; }
@@ -36,9 +36,21 @@ const MAXC = 256, SPF = 16, VPC = 27 * SPF; // must match the server's MAX_CUBES
 const cellGeo = new RoundedBoxGeometry(1, 1, 1, 2, .07);
 const glowAttr = new THREE.InstancedBufferAttribute(new Float32Array(MAXC * 27 * 3), 3); glowAttr.setUsage(THREE.DynamicDrawUsage); cellGeo.setAttribute('aGlow', glowAttr);
 const cellMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .62, roughness: .38, envMapIntensity: .55 });
+// Lit edges: every cube's edges catch a thin line of its own colour (local position on the unit box, on the GPU; needs instance colours)
+function withEdges(sh, k) {
+  sh.vertexShader = 'varying vec3 vLocal;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vLocal = position;');
+  sh.fragmentShader = 'varying vec3 vLocal;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  { vec3 a = abs(vLocal) * 2.0; float hi = max(a.x, max(a.y, a.z)), lo = min(a.x, min(a.y, a.z)), mid = a.x + a.y + a.z - hi - lo;\n    totalEmissiveRadiance += vColor * smoothstep(0.84, 0.97, mid) * ' + k.toFixed(2) + '; }');
+}
+// Shimmer: a slow wave of glints travels through the cells of every cube in the cube's own gem (its instance colour, on the GPU).
+const shimmer = { value: 0 };
 cellMat.onBeforeCompile = sh => {
-  sh.vertexShader = 'attribute vec3 aGlow;\nvarying vec3 vGlow;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGlow = aGlow;');
-  sh.fragmentShader = 'varying vec3 vGlow;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += vGlow;');
+  sh.uniforms.uTime = shimmer;
+  sh.vertexShader = 'attribute vec3 aGlow;\nvarying vec3 vGlow;\nvarying float vShine;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+  vGlow = aGlow;
+  float cell = mod(float(gl_InstanceID), 27.0), slot = floor(float(gl_InstanceID) / 27.0);
+  vShine = pow(max(0.0, sin(uTime * 0.85 - dot(position, vec3(2.6, 3.8, 2.0)) - slot * 0.37)), 8.0); // a band of light sweeping across the cube's faces`);
+  sh.fragmentShader = 'varying vec3 vGlow;\nvarying float vShine;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += vGlow + vColor * vShine * 0.55;');
+  withEdges(sh, 2.2);
 };
 const cellsIM = new THREE.InstancedMesh(cellGeo, cellMat, MAXC * 27);
 cellsIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage); cellsIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAXC * 27 * 3), 3);

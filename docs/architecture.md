@@ -2,7 +2,7 @@
 
 > [README (EN)](../README.en.md) · [Guide](en/guide.md) · [Arquitectura (ES)](arquitectura.md)
 
-vxtop is a local web app: a Node.js server that **reads** the machine and a three.js client that draws it. No npm dependencies, no build step.
+Prisma is a local web app: a Node.js server that **reads** the machine and a three.js client that draws it. No npm dependencies, no build step.
 
 ```
 ┌──────────── browser (127.0.0.1) ────────────┐        ┌──────────────── server.js ────────────────┐
@@ -23,7 +23,7 @@ vxtop is a local web app: a Node.js server that **reads** the machine and a thre
 |---|---|
 | CLI and HTTP | flags, loopback-only server, token and origin checks, static files, the client bundle |
 | Scanning | a folder becomes a cube: 27 cells = file kind (code · data · docs) × depth (root · 1–2 · 3+) × age (< 1 h · < 24 h · older), with a time and entry budget |
-| Indexes | `indexer.js` runs in a worker thread and writes gzip JSON indexes to `~/.vxtop/index`; watchers keep them current |
+| Indexes | `indexer.js` runs in a worker thread and writes gzip JSON indexes to `~/.prisma/index`; watchers keep them current |
 | Live | drive watchers, AI sessions (`~/.claude*`), open programs and their paths are grouped into the *En vivo* space; folders fade 8 s after their last event |
 | System | processes, network connections, GPU (`nvidia-smi`), tasks, services, startup items — all read-only |
 | Native helper | `pshost.ps1` stays running and answers JSON lines: who has a file open (Restart Manager), foreground window and cursor, window thumbnails (`PrintWindow`), icons, GPU and task data |
@@ -61,7 +61,7 @@ Rendering relies on `InstancedMesh`: all cells of all cubes are a few draw calls
 
 ## Data on disk
 
-Only `~/.vxtop`: `index/` (drive indexes), `scenes/`, `token` (port → token, mode `0600`). On Windows the launcher also uses `%LOCALAPPDATA%\vxtop` for its log and a separate Chrome profile.
+Only `~/.prisma`: `index/` (drive indexes), `scenes/`, `token` (port → token, mode `0600`). On Windows the launcher also uses `%LOCALAPPDATA%\prisma` for its log and a separate Chrome profile.
 
 ## Tests
 

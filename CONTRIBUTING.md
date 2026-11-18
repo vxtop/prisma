@@ -1,18 +1,18 @@
-# Contribuir a vxtop
+# Contribuir a Prisma
 
-Gracias por tu interés. vxtop es pequeño a propósito: Node.js sin más, sin dependencias de npm y sin paso de compilación. Por favor, mantenlo así.
+Gracias por tu interés. Prisma es pequeño a propósito: Node.js sin más, sin dependencias de npm y sin paso de compilación. Por favor, mantenlo así.
 
 ## Reglas básicas
 
-1. **Solo lectura, siempre.** vxtop observa: nunca crea, modifica ni borra nada de lo que mira, y nunca actúa sobre procesos ni sobre el sistema. La única carpeta en la que puede escribir es la suya (`~/.vxtop`). No se aceptan *pull requests* que rompan esta regla.
+1. **Solo lectura, siempre.** Prisma observa: nunca crea, modifica ni borra nada de lo que mira, y nunca actúa sobre procesos ni sobre el sistema. La única carpeta en la que puede escribir es la suya (`~/.prisma`). No se aceptan *pull requests* que rompan esta regla.
 2. **Local y privado.** El servidor solo escucha en `127.0.0.1`, cada llamada a la API lleva el token de sesión y no se envía nada a servicios externos.
 3. **Sin dependencias nuevas.** El código de terceros va en `public/vendor/` con su licencia, y solo cuando no hay una alternativa razonable.
 
 ## Empezar
 
 ```bash
-git clone https://github.com/vxtop/vxtop.git
-cd vxtop
+git clone https://github.com/OWNER/prisma.git
+cd prisma
 node server.js --port 4899      # una segunda instancia junto a la que usas a diario
 ```
 

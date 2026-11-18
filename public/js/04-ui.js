@@ -32,7 +32,7 @@ function renderLayers() {
   $('#h-vram').style.width = (g ? g.memUsed / g.memTotal * 100 : 0) + '%'; $('#v-vram').textContent = g ? fmtB(g.memUsed) : '—';
   $('#h-disk').style.width = (dk ? (1 - dk.free / dk.total) * 100 : 0) + '%'; $('#v-disk').textContent = dk ? fmtB(dk.free) + ' lib.' : '—';
   const sp = $('#spark'), x = sp.getContext('2d'), W = sp.width, H = sp.height; x.clearRect(0, 0, W, H); x.beginPath();
-  S.cpuHist.forEach((v, i) => { const px = W - (S.cpuHist.length - 1 - i) * (W / 89), py = H - 2 - v * (H - 4); i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.strokeStyle = 'rgba(79,179,173,.8)'; x.lineWidth = 1.5; x.stroke();
+  S.cpuHist.forEach((v, i) => { const px = W - (S.cpuHist.length - 1 - i) * (W / 89), py = H - 2 - v * (H - 4); i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.strokeStyle = 'rgba(23,104,181,.8)'; x.lineWidth = 1.5; x.stroke();
   if (p) { $('#L2').textContent = fmtN(p.count); $('#L2a').textContent = `E/S  ↓ ${fmtB(p.rd)}/s   ↑ ${fmtB(p.wr)}/s`; const t = p.top[0]; $('#L2b').textContent = t ? `top  ${t.name} · ${t.cpu.toFixed(0)} % · ${fmtB(t.ws)}` : ''; }
   let files = 0, bytes = 0, ev = 0; S.cores.forEach(k => { if (k.data) { files += k.data.totals.files; bytes += k.data.totals.bytes; } ev += k.evCount; });
   $('#L3').textContent = fmtB(bytes); $('#L3a').textContent = `${fmtN(files)} archivos en ${S.cubes.size} cubos`; if (![...S.idx.values()].some(x => x.state === 'running')) $('#L3b').textContent = `${fmtN(ev)} eventos de disco observados`; else renderIndexLine();
@@ -114,12 +114,12 @@ $('#tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return
 const openPath = async expand => { const inp = $('#path'), p = inp.value.trim(); if (!p) return inp.focus();
   const many = p.split(/\s*[;\n]\s*/).filter(Boolean); // several paths separated by ";": all open and are placed in turn
   if (VIEW.cur === 'arbol' && many.length === 1) { inp.value = ''; return trOpen(p); }
-  try { if (many.length > 1) await post('/api/openmany', { paths: many }); else await post('/api/open', { path: p, expand });inp.value = ''; inp.classList.remove('bad'); } catch (e) { inp.classList.add('bad'); feed('error', '#d9534f', e.message); } };
+  try { if (many.length > 1) await post('/api/openmany', { paths: many }); else await post('/api/open', { path: p, expand });inp.value = ''; inp.classList.remove('bad'); } catch (e) { inp.classList.add('bad'); feed('error', '#C52235', e.message); } };
 $('#b-open').onclick = () => openPath(false); $('#b-expand').onclick = () => openPath(true);
 const SR = { list: [], i: -1, t: 0, q: '' };
 function renderSrch() { const el = $('#srch'); if (!SR.q) { el.classList.remove('on'); return; } el.classList.add('on');
   el.innerHTML = SR.list.length ? SR.list.map((r, i) => `<div class="${i === SR.i ? 'on' : ''}" data-i="${i}"><b>${esc(r.name)}</b><span>${r.bytes != null ? fmtB(r.bytes) : ''}</span><i>${esc(r.path)}</i></div>`).join('') : '<div class="note">Sin resultados en los índices · Intro abre la ruta escrita</div>'; }
-function srchOpen(r, expand) { const inp = $('#path'); inp.value = ''; SR.q = ''; renderSrch(); inp.blur(); if (VIEW.cur === 'arbol') return trOpen(r.path); if (VIEW.cur !== 'espacio') setView('espacio'); post('/api/open', { path: r.path, expand }).catch(er => feed('error', '#d9534f', er.message)); }
+function srchOpen(r, expand) { const inp = $('#path'); inp.value = ''; SR.q = ''; renderSrch(); inp.blur(); if (VIEW.cur === 'arbol') return trOpen(r.path); if (VIEW.cur !== 'espacio') setView('espacio'); post('/api/open', { path: r.path, expand }).catch(er => feed('error', '#C52235', er.message)); }
 $('#path').oninput = () => { const q = $('#path').value.trim(); SR.q = q; SR.i = -1; clearTimeout(SR.t); if (!q || q.includes(';')) { SR.list = []; return renderSrch(); }
   SR.t = setTimeout(async () => { try { const r = await api('/api/search?q=' + encodeURIComponent(q)); if (SR.q === q) { SR.list = r; renderSrch(); } } catch {} }, 120); };
 $('#path').onblur = () => setTimeout(() => { SR.q = ''; renderSrch(); }, 160);
@@ -130,7 +130,7 @@ $('#path').onkeydown = e => { e.stopPropagation();
   if (e.key === 'Enter') { const r = SR.i >= 0 ? SR.list[SR.i] : null; if (r) return srchOpen(r, e.shiftKey); const v = $('#path').value.trim(); if (!/[\\/:;]/.test(v) && SR.list[0]) return srchOpen(SR.list[0], e.shiftKey); SR.q = ''; renderSrch(); openPath(e.shiftKey); } };
 const setLayout = m => post('/api/layout', { mode: m }).catch(() => {});
 $('#lay').onclick = e => { const b = e.target.closest('button'); if (b) setLayout(b.dataset.m); };
-$('#r-exp').onclick = () => S.sel && post('/api/open', { path: S.sel.path, expand: true }).catch(e => feed('error', '#d9534f', e.message));
+$('#r-exp').onclick = () => S.sel && post('/api/open', { path: S.sel.path, expand: true }).catch(e => feed('error', '#C52235', e.message));
 $('#r-close').onclick = () => { if (S.mode === 'obj' && OB.sel) return closeObj(OB.sel); if (S.mode === 'proc') { G.sel = null; S.mode = 'cube'; return renderPanel(); } S.sel && post('/api/close', { path: S.sel.path }).catch(() => {}); };
 function setSlice(axis) {
   const s = S.slice; S.slice = axis == null ? null : !s || s.axis !== axis ? { axis, layer: 0 } : s.layer < 2 ? { axis, layer: s.layer + 1 } : null;

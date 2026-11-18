@@ -11,8 +11,8 @@ const trGeo = (() => { const g = [], b = new THREE.BoxGeometry(.3, .3, .3); for 
 const trIM = new THREE.InstancedMesh(trGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .62, roughness: .38, envMapIntensity: .55 }), TRMAX); // same dark finish as the Space cubes
 trIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage); trIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(TRMAX * 3), 3); trIM.count = 0; trIM.frustumCulled = false; trIM.visible = false; scene.add(trIM);
 const trLGeo = new THREE.BufferGeometry(); trLGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRMAX * 18), 3));
-const trLines = new THREE.LineSegments(trLGeo, new THREE.LineBasicMaterial({ color: 0x3f8f8a, transparent: true, opacity: .5, depthWrite: false })); trLines.frustumCulled = false; trLines.visible = false; scene.add(trLines);
-const trRing = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 64), new THREE.MeshBasicMaterial({ color: 0x4fb3ad, transparent: true, opacity: .8, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); trRing.rotation.x = -Math.PI / 2; trRing.visible = false; scene.add(trRing);
+const trLines = new THREE.LineSegments(trLGeo, new THREE.LineBasicMaterial({ color: 0x12528f, transparent: true, opacity: .5, depthWrite: false })); trLines.frustumCulled = false; trLines.visible = false; scene.add(trLines);
+const trRing = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 64), new THREE.MeshBasicMaterial({ color: 0x1768b5, transparent: true, opacity: .8, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); trRing.rotation.x = -Math.PI / 2; trRing.visible = false; scene.add(trRing);
 const trSize = n => (n.depth ? 1 : 1.35) * (n.b != null && n.b > 0 ? .5 + 1.1 * Math.min(1, Math.max(0, (Math.log10(n.b + 1) - 3) / 8)) : .45);
 const TRC = { new: new THREE.Color(.07, .2, .19), mid: new THREE.Color(.08, .11, .16), old: new THREE.Color(.075, .08, .09), empty: new THREE.Color(.035, .038, .042), skip: new THREE.Color(.19, .13, .05), tmp: new THREE.Color() }; // tinted graphite, no glow
 function trColor(n) { const d = (Date.now() - (n.t || 0)) / 864e5, c = TRC.tmp.copy(n.skip ? TRC.skip : !n.f && !n.k ? TRC.empty : d < 1 / 24 ? TRC.new : d < 1 ? TRC.mid : TRC.old); // now (<1 h) · today · older
@@ -46,34 +46,34 @@ function trLayout() {
     blk(root); const abs = (n, X, Z) => { n.tgt.set(X + n.ox, FLOOR + n.ts / 2, Z); for (const c of kidsV(n)) abs(c, X + c.bx, Z + c.bz); };
     abs(root, TREE.x - root.bw / 2, TREE.z); }
   TR.list = L; TR.moving = true; TR.dirtyCol = true;
-  if (TR.capped) feed('árbol', '#e8a33d', `se muestran ${fmtN(TRMAX)} carpetas como máximo: contrae ramas para ver otras`);
+  if (TR.capped) feed('árbol', '#D97757', `se muestran ${fmtN(TRMAX)} carpetas como máximo: contrae ramas para ver otras`);
 }
 async function trFetch(p, depth, max) {
   TR.busy = true; renderTrBar();
-  try { const r = await api(`/api/tree?path=${encodeURIComponent(p)}&depth=${depth}&max=${Math.max(50, max | 0)}`); TR.src = r.src; if (r.truncated) feed('árbol', '#e8a33d', `tope de ${fmtN(r.count)} carpetas en esta lectura · despliega por ramas`); return r; }
+  try { const r = await api(`/api/tree?path=${encodeURIComponent(p)}&depth=${depth}&max=${Math.max(50, max | 0)}`); TR.src = r.src; if (r.truncated) feed('árbol', '#D97757', `tope de ${fmtN(r.count)} carpetas en esta lectura · despliega por ramas`); return r; }
   finally { TR.busy = false; renderTrBar(); }
 }
 async function trOpen(p) {
   if (!p) return; TR.want = p; const gen = ++TR.gen; if (VIEW.cur !== 'arbol') setView('arbol');
   try { const r = await trFetch(p, 3, 3000); if (gen !== TR.gen) return; for (const sp of TR.pool) { sp.userData.node = null; sp.visible = false; } TR.nodes.clear(); /* free the labels for the new root */ TR.sel = null; TR.hover = null; if (S.mode === 'tnode') S.mode = 'cube';
-    TR.root = trMerge(r.node, null, r.root); TR.root.open = true; TR.dirty = true; TR.fit = true; feed('árbol', '#4fb3ad', `${TR.root.name} · ${fmtN(r.count)} carpetas · ${r.src === 'indice' ? 'del índice' : 'leídas del disco'}`); renderPanel(); }
-  catch (er) { feed('error', '#e0605c', er.message); }
+    TR.root = trMerge(r.node, null, r.root); TR.root.open = true; TR.dirty = true; TR.fit = true; feed('árbol', '#1768B5', `${TR.root.name} · ${fmtN(r.count)} carpetas · ${r.src === 'indice' ? 'del índice' : 'leídas del disco'}`); renderPanel(); }
+  catch (er) { feed('error', '#C52235', er.message); }
 }
 function trWalk(n, f, lvl = 0) { f(n, lvl); if (n.kids) for (const ch of n.kids) trWalk(ch, f, lvl + 1); }
 async function trToggle(n) {
   if (n.open) { n.open = false; TR.dirty = true; return; }
   if (n.kids) { n.open = true; TR.dirty = true; return; }
-  if (!n.k) return feed('árbol', '#8a9399', n.name + ' no tiene subcarpetas');
-  const gen = TR.gen; try { const r = await trFetch(n.path, 1, TRMAX); if (gen !== TR.gen) return; trMerge(r.node, n.parent, n.path); n.open = true; TR.dirty = true; } catch (er) { feed('error', '#e0605c', er.message); }
+  if (!n.k) return feed('árbol', '#8b95a3', n.name + ' no tiene subcarpetas');
+  const gen = TR.gen; try { const r = await trFetch(n.path, 1, TRMAX); if (gen !== TR.gen) return; trMerge(r.node, n.parent, n.path); n.open = true; TR.dirty = true; } catch (er) { feed('error', '#C52235', er.message); }
 }
 async function trExpand(n, levels) { // expand everything below, up to `levels` deep (subject to the folder cap)
   const gen = TR.gen; try { const r = await trFetch(n.path, levels, TRMAX - TR.list.length + (n.kids ? n.kids.length : 0)); if (gen !== TR.gen) return; trMerge(r.node, n.parent, n.path);
-    trWalk(n, (x, l) => { if (l < levels && x.kids) x.open = true; }); TR.dirty = true; } catch (er) { feed('error', '#e0605c', er.message); }
+    trWalk(n, (x, l) => { if (l < levels && x.kids) x.open = true; }); TR.dirty = true; } catch (er) { feed('error', '#C52235', er.message); }
 }
 function trCollapse(n) { trWalk(n, x => { x.open = false; }); TR.dirty = true; }
 async function trLevels(N) { // like `tree -L N`: open N levels from the root, collapse the rest
   const R = TR.root; if (!R) return;
-  const gen = TR.gen; try { const r = await trFetch(R.path, N, TRMAX); if (gen !== TR.gen) return; trMerge(r.node, null, R.path); trWalk(R, (x, l) => { x.open = l < N && !!x.kids; }); R.open = !!R.kids; TR.dirty = true; TR.fit = true; } catch (er) { feed('error', '#e0605c', er.message); }
+  const gen = TR.gen; try { const r = await trFetch(R.path, N, TRMAX); if (gen !== TR.gen) return; trMerge(r.node, null, R.path); trWalk(R, (x, l) => { x.open = l < N && !!x.kids; }); R.open = !!R.kids; TR.dirty = true; TR.fit = true; } catch (er) { feed('error', '#C52235', er.message); }
 }
 function trSelect(n) { TR.sel = n; S.mode = 'tnode'; TR.dirtyCol = true; renderPanel(); renderCubes(); setTimeout(() => { const p2 = [n.tgt.clone().addScalar(n.ts + 1), n.tgt.clone().subScalar(n.ts + 1)]; if (n.open && n.kids) n.kids.slice(0, 200).forEach(k => k.vis && p2.push(k.tgt.clone())); if (n.parent) { p2.push(n.parent.tgt.clone()); (n.parent.kids || []).slice(0, 40).forEach(k => k.vis && p2.push(k.tgt.clone())); } /* frame it with its parent and siblings for context */ focusOn(p2, .5, 8, false, n.tgt.clone()); }, 90); }
 function trPick() { let best = null, bd = Infinity;
@@ -84,14 +84,14 @@ const trTip = n => `<b>${esc(n.name)}</b><br><span style="color:var(--dim)">${es
 function trMenu(n) { const up = n.path.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, '');
   return [[n.open ? 'Contraer' : 'Desplegar', () => trToggle(n), 'doble clic'], ['Desplegar todo debajo · 3 niveles', () => trExpand(n, 3)], ['Desplegar todo debajo · 6 niveles', () => trExpand(n, 6)], ['Contraer todo debajo', () => trCollapse(n)], '-',
     ['Ver esta carpeta como raíz', () => trOpen(n.path)], ...(n === TR.root && up && up !== n.path ? [['Subir a la carpeta superior', () => trOpen(/^[a-z]:$/i.test(up) ? up + '\\' : up)]] : []),
-    ['Abrir como cubo en el Espacio', () => { setView('espacio'); post('/api/open', { path: n.path }).catch(e => feed('error', '#d9534f', e.message)); }], ['Explorar esta carpeta', () => { setLeft('explorer'); exGo(n.path); }], ['Indexar (tamaños completos)', () => startIx(n.path)], '-', ['Copiar ruta', () => copy(n.path)]]; }
+    ['Abrir como cubo en el Espacio', () => { setView('espacio'); post('/api/open', { path: n.path }).catch(e => feed('error', '#C52235', e.message)); }], ['Explorar esta carpeta', () => { setLeft('explorer'); exGo(n.path); }], ['Indexar (tamaños completos)', () => startIx(n.path)], '-', ['Copiar ruta', () => copy(n.path)]]; }
 function renderTreePanel() {
   const n = TR.sel; if (!n) return; builtFor = ''; panelFrame('tnode', n.name, n.path, 'info');
   const kids = (n.kids || []).slice().sort((a, b) => (b.b || 0) - (a.b || 0)).slice(0, 14), mx = Math.max(1, ...kids.map(x => x.b || 0));
   $('#tab').innerHTML = kvH([['Tamaño', n.b != null ? fmtB(n.b) + (n.part ? ' (parcial: indexa para el total)' : '') : '—'], ['Archivos en total', fmtN(n.f || 0)], ['Carpetas en total', fmtN(n.d || 0)], ['Archivos aquí', fmtN(n.own || 0)], ['Subcarpetas', fmtN(n.k || 0)], ['Último cambio aquí', n.t ? 'hace ' + ago(n.t) : '—'], ['Nivel', n.depth], ['Datos', TR.src === 'indice' ? 'índice (completos)' : 'lectura del disco']])
     + `<div class="acts">${n.k ? `<button data-ta="t">${n.open ? 'Contraer' : 'Desplegar'}</button><button data-ta="x3">Todo debajo · 3</button><button data-ta="c">Contraer todo</button>` : ''}<button data-ta="root">Ver como raíz</button><button data-ta="cube">Abrir como cubo</button><button data-ta="copy">Copiar ruta</button></div>`
     + (kids.length ? `<h2 class="sub">Subcarpetas por tamaño</h2>${kids.map(x => `<div class="extrow" data-tk="${esc(x.key)}" style="cursor:pointer"><span>${esc(x.name)}</span><div class="bar"><i style="width:${(x.b || 0) / mx * 100}%"></i></div><span>${x.b != null ? fmtB(x.b) : '—'}</span></div>`).join('')}` : '');
-  const A = { t: () => trToggle(n), x3: () => trExpand(n, 3), c: () => trCollapse(n), root: () => trOpen(n.path), cube: () => { setView('espacio'); post('/api/open', { path: n.path }).catch(e => feed('error', '#d9534f', e.message)); }, copy: () => copy(n.path) };
+  const A = { t: () => trToggle(n), x3: () => trExpand(n, 3), c: () => trCollapse(n), root: () => trOpen(n.path), cube: () => { setView('espacio'); post('/api/open', { path: n.path }).catch(e => feed('error', '#C52235', e.message)); }, copy: () => copy(n.path) };
   $('#tab').querySelectorAll('[data-ta]').forEach(b => b.onclick = () => A[b.dataset.ta]());
   $('#tab').querySelectorAll('[data-tk]').forEach(r => r.onclick = () => { const x = TR.nodes.get(r.dataset.tk); if (x) trSelect(x); });
 }
@@ -134,8 +134,8 @@ function stepTree(dt) {
     const free = TR.pool.filter(sp => !sp.userData.node || !sp.userData.node.lab || !sp.userData.node.vis); free.forEach(sp => { if (sp.userData.node) sp.userData.node.sp = null; sp.userData.node = null; sp.visible = false; });
     for (const n of L) { if (!n.lab || n.sp) continue; let sp = free.pop(); if (!sp) { if (TR.pool.length >= 60) continue; sp = textSprite(768, 112); sp.material.sizeAttenuation = false; sp.center.set(.5, 0); scene.add(sp); TR.pool.push(sp); } sp.userData.node = n; sp.userData.key = ''; n.sp = sp; } }
   for (const sp of TR.pool) { const n = sp.userData.node; if (!n) { sp.visible = false; continue; } const key = (n.k ? (n.open && n.kids ? '▾ ' : '▸ ') : '') + n.name + '|' + trInfo(n);
-    if (sp.userData.key !== key) { sp.userData.key = key; drawText(sp, [[key.split('|')[0], 40, n.skip ? '#d9a55a' : '#eef1f3', 40], [trInfo(n), 30, 'rgba(190,200,206,.8)', 86]]); }
+    if (sp.userData.key !== key) { sp.userData.key = key; drawText(sp, [[key.split('|')[0], 40, n.skip ? '#E6B844' : '#F0EBDD', 40], [trInfo(n), 30, 'rgba(190,200,206,.8)', 86]]); }
     const sel = n === TR.sel || n === TR.hover, lh = sel ? 40 : n.depth ? 30 : 36; sp.visible = true; sp.position.set(n.pos.x, n.pos.y + n.s * .55 + .05, n.pos.z); sp.scale.set(pxScale(lh) * 768 / 112, pxScale(lh), 1); }
 }
 
-try { const m = JSON.parse(localStorage.getItem('vxtop.view') || 'null'); if (m && m.v && m.v !== 'espacio') setTimeout(() => { if (m.mode) TR.mode = m.mode; if (m.v === 'arbol' && m.root) trOpen(m.root); else setView(m.v); }, 600); } catch {}
+try { const m = JSON.parse(localStorage.getItem('prisma.view') || 'null'); if (m && m.v && m.v !== 'espacio') setTimeout(() => { if (m.mode) TR.mode = m.mode; if (m.v === 'arbol' && m.root) trOpen(m.root); else setView(m.v); }, 600); } catch {}

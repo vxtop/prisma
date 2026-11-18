@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 virtuanista
 #
-# vxtop native multi-folder picker (IFileOpenDialog). Only returns paths; it opens, creates or changes nothing.
+# Prisma native multi-folder picker (IFileOpenDialog). Only returns paths; it opens, creates or changes nothing.
 # Writes a JSON array of the chosen folders to stdout ([] when cancelled).
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
@@ -10,7 +10,7 @@ Add-Type -Language CSharp -ReferencedAssemblies System.Windows.Forms -TypeDefini
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-public static class vxtopPick {
+public static class prismaPick {
   [ComImport, Guid("DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7")] class FileOpenDialogRCW { }
   [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
   interface IShellItem {
@@ -77,5 +77,5 @@ public static class vxtopPick {
 $f = New-Object System.Windows.Forms.Form
 $f.TopMost = $true; $f.ShowInTaskbar = $false; $f.Opacity = 0; $f.FormBorderStyle = 'None'; $f.StartPosition = 'CenterScreen'; $f.Size = New-Object System.Drawing.Size(1, 1)
 $f.Show(); $f.Activate()
-try { $r = [vxtopPick]::Pick($f.Handle, 'vxtop · elige una o varias carpetas') } finally { $f.Close() }
+try { $r = [prismaPick]::Pick($f.Handle, 'Prisma · elige una o varias carpetas') } finally { $f.Close() }
 ConvertTo-Json -Compress -InputObject @($r)

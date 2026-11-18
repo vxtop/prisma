@@ -15,7 +15,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 // === Utilities ===
 // settings saved by earlier versions (named SIMULA) under simula.* keys
-try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('simula.') && localStorage.getItem('vxtop.' + k.slice(7)) == null) localStorage.setItem('vxtop.' + k.slice(7), localStorage.getItem(k)); } } catch {}
+try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('simula.') && localStorage.getItem('prisma.' + k.slice(7)) == null) localStorage.setItem('prisma.' + k.slice(7), localStorage.getItem(k)); } } catch {}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const fmtB = n => { if (n == null || !isFinite(n)) return '—'; const u = ['B','KB','MB','GB','TB']; let i = 0; while (n >= 1024 && i < 4) { n /= 1024; i++; } return (i && n < 100 ? n.toFixed(1) : Math.round(n)) + ' ' + u[i]; };
@@ -31,14 +31,19 @@ const trimSep = p => String(p).replace(/[\\/]+$/, '');
 const under = (a, base) => { const b = trimSep(base); return a.length > b.length && a.startsWith(b) && /[\\/]/.test(a[b.length]); };
 const relTo = (abs, base) => String(abs).slice(trimSep(base).length + 1);
 const slug = p => String(p).replace(/[^a-zA-Z0-9]/g, '-');
-const TK = () => (document.querySelector('meta[name=vxtop]') || {}).content || '';
-const api = async p => { const r = await fetch(p + (p.includes('?') ? '&' : '?') + 't=' + TK()); if (r.status === 403) { setTimeout(() => location.reload(), 300); throw new Error('vxtop se reinició: recargando'); } const t = await r.text(); let j = null; try { j = t ? JSON.parse(t) : null; } catch {} if (!r.ok) throw new Error((j && j.error) || 'HTTP ' + r.status); return j; };
-const post = async (p, d) => { const r = await fetch(p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Vxtop': TK() }, body: JSON.stringify(d) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
+const TK = () => (document.querySelector('meta[name=prisma]') || {}).content || '';
+const api = async p => { const r = await fetch(p + (p.includes('?') ? '&' : '?') + 't=' + TK()); if (r.status === 403) { setTimeout(() => location.reload(), 300); throw new Error('Prisma se reinició: recargando'); } const t = await r.text(); let j = null; try { j = t ? JSON.parse(t) : null; } catch {} if (!r.ok) throw new Error((j && j.error) || 'HTTP ' + r.status); return j; };
+const post = async (p, d) => { const r = await fetch(p, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Prisma': TK() }, body: JSON.stringify(d) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
 
 const TYPES = ['Código', 'Datos', 'Docs·Media'], DEPTHS = ['Raíz', 'Nivel 1–2', 'Nivel 3+'], AGES = ['Ahora <1 h', 'Hoy <24 h', 'Antes'];
 const AX = [TYPES, DEPTHS, AGES], AXN = ['X · tipo', 'Y · profundidad', 'Z · tiempo'];
-const TYPE_HEX = ['#4fb3ad', '#6f8fb3', '#9a8f7a'], TYPE_COL = TYPE_HEX.map(h => new THREE.Color(h));
-const AI_HEX = ['#e8a33d', '#b9d3df', '#d6c08f', '#9fb8a0'];
+const TYPE_HEX = ['#1768B5', '#269B65', '#E6B844'], TYPE_GLOW_HEX = ['#5aa2ea', '#4fd39a', '#f3d77e'], TYPE_COL = TYPE_GLOW_HEX.map(h => new THREE.Color(h)); // accents glow in lighter gem tints
+// Gem of a whole cube (one colour per cube): sapphire code, emerald data, gold documents and media, silver folders, ruby executables.
+// Each gem is [body, glow]: the body tints the matte metal, the glow lights windows, activity and the shimmer.
+const GEM_HEX = { code: ['#1768B5', '#5aa2ea'], data: ['#269B65', '#4fd39a'], docs: ['#E6B844', '#f3d77e'], folder: ['#AEB9C5', '#dfe6ee'], exe: ['#C52235', '#f0707e'] };
+const GEM = Object.fromEntries(Object.entries(GEM_HEX).map(([k, [a, b]]) => [k, [new THREE.Color(a), new THREE.Color(b)]]));
+const GEM_TXT = { code: 'Código', data: 'Datos', docs: 'Documentos y medios', folder: 'Carpetas', exe: 'Ejecutables' };
+const AI_HEX = ['#D97757', '#b9d3df', '#d6c08f', '#9fb8a0'];
 const CODE = new Set('js mjs cjs ts jsx tsx py rs go c cc cpp h hpp cs java kt swift rb php html htm css scss vue svelte sh ps1 bat cmd sql lua dart r m asm glsl wgsl gd'.split(' '));
 const DATA = new Set('json jsonl csv tsv xml yaml yml toml parquet db sqlite bin dat npy npz pt pth onnx safetensors pkl h5 lock log ini env cfg conf gguf arrow idx pack'.split(' '));
 const cellOf = (rel, mtime) => { const e = (rel.match(/\.([^.\\/]+)$/) || [])[1]?.toLowerCase() || '', t = CODE.has(e) ? 0 : DATA.has(e) ? 1 : 2;

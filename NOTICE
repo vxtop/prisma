@@ -1,12 +1,12 @@
-vxtop
+Prisma
+Copyright 2026 the Prisma authors
+
+Prisma is a work derived from vxtop, created and designed by virtuanista.
+https://github.com/vxtop/vxtop
 Copyright 2026 virtuanista
 
-This product is vxtop, created and designed by virtuanista.
-https://github.com/vxtop/vxtop
-
-If you redistribute vxtop or a work derived from it, you must keep this NOTICE
-file and give visible credit to the original author, as required by section 4(d)
-of the Apache License, Version 2.0.
+As required by section 4(d) of the Apache License, Version 2.0, anyone who redistributes Prisma or a work derived
+from it must keep this NOTICE file and give visible credit to the original author of vxtop.
 
 -------------------------------------------------------------------------------
 Third-party components bundled in public/vendor/:
