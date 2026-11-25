@@ -10,7 +10,8 @@ const rawURL = p => '/api/raw?t=' + TOKEN + '&path=' + encodeURIComponent(p);
 const iconURL = p => '/api/icon?t=' + TOKEN + '&exe=' + encodeURIComponent(p);
 const SEP = p => (String(p).includes('\\') ? '\\' : '/');
 const joinP = (a, b) => a.replace(/[\\/]+$/, '') + SEP(a) + b;
-const KIND_COL = { dir: '#AEB9C5', drive: '#AEB9C5', code: '#1768B5', data: '#269B65', image: '#E6B844', video: '#E6B844', audio: '#E6B844', doc: '#E6B844', archive: '#8a929e', exe: '#C52235', font: '#AEB9C5', model3d: '#E6B844', other: '#6a7381', link: '#6a7381' };
+// One colour per family, light enough to read as text on graphene: neutral = containers, blue = code, green = data, gold = documents, amethyst = media, rose = executables.
+const KIND_COL = { dir: '#DFE6EE', drive: '#DFE6EE', code: '#5AA2EA', data: '#4FD39A', image: '#B79CF5', video: '#B79CF5', audio: '#B79CF5', doc: '#F3D77E', archive: '#AEB9C5', exe: '#F0707E', font: '#DFE6EE', model3d: '#B79CF5', other: '#AEB9C5', link: '#AEB9C5' };
 const KIND_TXT = { dir: 'carpeta', drive: 'unidad', code: 'código', data: 'datos', image: 'imagen', video: 'vídeo', audio: 'audio', doc: 'documento', archive: 'comprimido', exe: 'binario', font: 'fuente', model3d: 'modelo / diseño', other: 'archivo', link: 'enlace' };
 const ctxEl = $('#ctx');
 function menu(x, y, items) {
@@ -24,7 +25,7 @@ addEventListener('contextmenu', e => { if (!e.target.closest('input')) e.prevent
 const copy = t => navigator.clipboard ? navigator.clipboard.writeText(String(t)).then(() => feed('copiado', '#AEB9C5', String(t).slice(0, 60)), () => {}) : null;
 const openDeep = (p, depth) => post('/api/open', { path: p, depth }).catch(e => feed('error', '#C52235', e.message));
 
-const SET = { fog: .011, bloom: .42, flow: 1, icon: 1, dpr: 1.5, labels: 1, zoomCur: 0, screens: 0 };
+const SET = { fog: .011, bloom: .3, flow: 1, icon: 1, dpr: 1.5, labels: 1, zoomCur: 0, screens: 0 };
 try { Object.assign(SET, JSON.parse(localStorage.getItem('prisma.set') || '{}')); } catch {}
 const SETDEF = [['fog', 'Profundidad de visión', .002, .03, .001, v => (1 / v | 0) + ' u', true], ['bloom', 'Brillo de emisión', 0, 1.2, .02, v => v.toFixed(2)], ['flow', 'Flujo de partículas', 0, 3, .1, v => v.toFixed(1) + '×'],
   ['icon', 'Tamaño de procesos', .5, 2.5, .05, v => v.toFixed(2) + '×'], ['labels', 'Etiquetas', 0, 1, 1, v => v ? 'sí' : 'no'], ['zoomCur', 'Rueda hacia el cursor', 0, 1, 1, v => v ? 'sí' : 'al centro'], ['screens', 'Pantallas en vivo de tus ventanas', 0, 1, 1, v => v ? 'sí' : 'no'], ['dpr', 'Resolución máxima', .6, 2, .1, v => v.toFixed(1) + '×']];

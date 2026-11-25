@@ -14,7 +14,7 @@ function makeCube(info) {
   const par = info.parent && S.cubes.get(K(info.parent)); if (par) c.pos.copy(par.pos);
   gemBody(c);
   cellsIM.instanceColor.needsUpdate = true;
-  c.label = textSprite(768, 96); c.label.material.sizeAttenuation = false; c.label.material.depthTest = false; c.label.renderOrder = 6; c.label.center.set(.5, 0); scene.add(c.label); drawLabel(c);
+  c.label = textSprite(768, 96); c.label.userData.plate = true; c.label.material.sizeAttenuation = false; c.label.material.depthTest = false; c.label.renderOrder = 6; c.label.center.set(.5, 0); scene.add(c.label); drawLabel(c);
   S.cubes.set(c.key, c); return c;
 }
 // Display name: generic folder names get their parent (Local › AppData reads better than a bare Local);
@@ -25,7 +25,9 @@ function dispName(c) {
   if (!GENERIC.has(n.toLowerCase()) && n.length > 3) return n;
   const parts = String(c.path || '').split(/[\\/]+/).filter(Boolean), par = parts[parts.length - 2]; return par && !/^[A-Za-z]:$/.test(par) ? par + ' › ' + n : n;
 }
-function drawLabel(c) { const pr = c.data && c.data.preset ? c.data.preset.types.filter(x => x[0] !== 'carpeta').map(x => x[1]).slice(0, 2).join(' · ') : ''; const g = c.data && c.gem ? c.gem : null; drawText(c.label, [[dispName(c), 44, '#f2f4f5', 35], [(g ? '◆ ' + GEM_TXT[g] + ' · ' : '') + (c.kind && !(g && (c.kind === 'codigo' || c.kind === 'medios')) ? KINDS[c.kind][1] + ' ' + KINDS[c.kind][2] + ' · ' : '') + (c.data ? `${fmtB(c.data.totals.bytes)} · ${fmtN(c.data.totals.files)} archivos${pr && !c.kind ? ' · ' + pr : ''}` : 'leyendo…'), 36, g ? GEM_HEX[g][1] : c.kind ? KINDS[c.kind][0] : 'rgba(190,200,206,.85)', 76]]); }
+function drawLabel(c) { // name, then what it is (kind, else gem) and its weight
+  const g = c.gem || 'folder', what = c.kind ? KINDS[c.kind][2] : GEM_TXT[g], col = c.kind === 'ia' ? '#D97757' : c.kind === 'medios' ? '#b79cf5' : GEM_HEX[g][1];
+  drawText(c.label, [[dispName(c), 44, '#f2f4f5', 35], [c.data ? `${what} · ${fmtB(c.data.totals.bytes)} · ${fmtN(c.data.totals.files)} archivos` : 'leyendo…', 34, c.data ? col : 'rgba(190,200,206,.85)', 76]]); }
 const lastPos = new Map();
 function dropCube(c) {
   for (let i = 0; i < 27; i++) setM(CM, c.slot * 27 + i, 0, 0, 0, 0, 0, 0);
@@ -52,9 +54,15 @@ const sliceOut = i => S.slice && coord(i)[S.slice.axis] !== S.slice.layer;
 // one body per cube: cells and file windows are data, not geometry, so they all sit at its centre
 function cellWorld(c, i, out) { return out.copy(c.pos); }
 function voxWorld(c, k, out) { return out.copy(c.pos); }
-function writeCube(c) { // a single solid cube (cell 13, the centre); the cube you are inside is drawn as its glass case instead
-  const P = c.pos, b0 = c.slot * 27, v0 = c.slot * VPC, hv = S.hover && S.hover.c === c, sc = c.key === S.enter ? 0 : c.s * 2.92 * (hv ? 1.04 : 1);
-  for (let i = 0; i < 27; i++) i === 13 ? setM(CM, b0 + i, P.x, P.y, P.z, sc, sc, sc) : setM(CM, b0 + i, 0, 0, 0, 0, 0, 0);
+/** What a cube holds decides its shape: one thing (or nothing) = one cube; several things = a cube of 27; things that hold things = a bigger cube of 27 whose cells are 27s themselves. */
+const LVL_K = [.343, 1, 1.34, 1.72]; // edges: one cube = 1 (a cell of a 27), a cube of 27 = 2.92, a 27 of 27s ≈ 3.9, a drive ≈ 5
+function cubeLevel(c) { if (!c.data) return c.lv == null ? 1 : c.lv; const t = c.data.totals, n = (t.files || 0) + (t.dirs || 0); return c.kind === 'unidad' ? 3 : n <= 1 ? 0 : t.dirs > 0 ? 2 : 1; }
+const lvK = c => { const k = LVL_K[c.lv = cubeLevel(c)]; return inside() ? Math.min(1, k) : k; };
+function writeCube(c) { // one body (cell 13) or 27 cells that spread apart when the pointer rests on them; the cube you are inside is drawn as its glass case instead
+  const P = c.pos, b0 = c.slot * 27, v0 = c.slot * VPC, hv = S.hover && S.hover.c === c, sc = c.key === S.enter ? 0 : c.s * 2.92 * (hv ? 1.04 : 1), lv = c.lv == null ? 1 : c.lv;
+  if (!lv || !sc) for (let i = 0; i < 27; i++) i === 13 ? setM(CM, b0 + i, P.x, P.y, P.z, sc, sc, sc) : setM(CM, b0 + i, 0, 0, 0, 0, 0, 0);
+  else { const sp = sc / 3 * (1 + 1.1 * c.ex), cs = sc / 3 * .93; for (let i = 0; i < 27; i++) { const B = BASE[i]; setM(CM, b0 + i, P.x + B[0] * sp, P.y + B[1] * sp, P.z + B[2] * sp, cs, cs, cs); } }
+  if (c.subW !== lv) { c.subW = lv; subAttr.array.fill(lv >= 2 ? 1 : 0, b0, b0 + 27); subAttr.needsUpdate = true; }
   for (let k = 0; k < c.nv; k++) setM(VM, v0 + k, 0, 0, 0, 0, 0, 0);
   cellsIM.instanceMatrix.addUpdateRange(b0 * 16, 27 * 16); if (c.nv) voxIM.instanceMatrix.addUpdateRange(v0 * 16, c.nv * 16);
   cellsIM.instanceMatrix.needsUpdate = true; voxIM.instanceMatrix.needsUpdate = true;
@@ -63,7 +71,7 @@ function writeCube(c) { // a single solid cube (cell 13, the centre); the cube y
 // === Space: cluster / stack / network / orbit ===
 const GEM_ORDER = { code: 0, data: 1, docs: 2, exe: 3, folder: 4 };
 /** Heavier folders are bigger cubes (gently: from 1 KB to 100 GB the edge grows about 40 %). */
-const weightF = c => c.data ? .82 + .4 * Math.min(1, Math.log10(1 + c.data.totals.bytes) / 11) : .9;
+const weightF = c => 1; // every cube the same size: weight shows in the thickness of its links, not in its body
 const SC = [1, .55, .32, .2], OPEN_EX = .3; // spacing of the 27 cells of the selected cube
 function layout(resetManual) {
   layoutCore(resetManual);
@@ -85,9 +93,9 @@ function layoutCore(resetManual) {
     order.forEach((c, i) => { c.rel = null; c.tScale = c.vdepth ? .7 : 1; c.home.set((i % cols - (cols - 1) / 2) * sp, 0, ((i / cols | 0) - (rows - 1) / 2) * sp); }); return;
   }
   const ring = (c, depth, spin) => {
-    c.tScale = SC[Math.min(depth, 3)] * weightF(c); const ks = kids(c); if (!ks.length) return 1.9 * c.tScale;
+    c.tScale = SC[Math.min(depth, 3)] * weightF(c); const lf = Math.max(.7, LVL_K[cubeLevel(c)]), ks = kids(c); if (!ks.length) return 1.9 * c.tScale * lf;
     const foot = 5.2 * SC[Math.min(depth + 1, 3)]; let placed = 0, r = 0, R = 0;
-    while (placed < ks.length) { R = r ? R + foot * 1.2 : 3.1 * c.tScale + foot;
+    while (placed < ks.length) { R = r ? R + foot * 1.2 : 3.1 * c.tScale * lf + foot;
       const m = Math.min(Math.max(1, Math.floor(2 * Math.PI * R / foot)), ks.length - placed);
       for (let i = 0; i < m; i++) { const ch = ks[placed + i]; ch.rel = { p: c, R, a: i / m * Math.PI * 2 + r * .5, spin: spin * (r % 2 ? -1 : 1) / (1 + r), tilt: spin ? .2 : 0 }; ring(ch, depth + 1, spin); }
       placed += m; r++; }
@@ -98,7 +106,8 @@ function layoutCore(resetManual) {
     if (mode === 'stack') { const towers = kids(core).sort((a, b) => bytes(b) - bytes(a)).map(k => { const d = []; (function w(c) { kids(c).forEach(x => { d.push(x); w(x); }); })(k); return [k, ...d.sort((a, b) => bytes(b) - bytes(a))]; });
       const gsz = l => Math.ceil(Math.sqrt(Math.ceil(l.length / 8))), foot = Math.max(1, ...towers.map(gsz)) * 1.3 + 1.3; let R = 2.6 + foot / 2 + .6, cap = 0, n = 0; const rings = []; while (n < towers.length) { cap = Math.max(1, Math.floor(2 * Math.PI * R / foot)); rings.push([R, Math.min(cap, towers.length - n)]); n += cap; R += foot; }
       desc.set(core, { towers, rings }); core.tScale = 1; core._ext = (rings.length ? rings[rings.length - 1][0] : 2.6) + 1.4; }
-    else core._ext = ring(core, 0, mode === 'orbit' ? .07 : 0); }
+    else core._ext = ring(core, 0, mode === 'orbit' ? .07 : 0);
+    core._ext = Math.max(core._ext, objRingExt(core)); } // room for the files it holds, on a ring around it
   const river = S.space === 'vivo' && !S.enter && (mode === 'cluster' || mode === 'orbit');
   if (river) riverLayout(cores);
   else if (cores.length > 4 && mode !== 'stack') { // each top-level cube keeps its slot on the circle; newcomers take free slots
@@ -142,7 +151,7 @@ function syncGhosts(mem) {
 function spaceBodies(dt) {
   if (inside()) { for (const c of S.cubes.values()) c.off.multiplyScalar(.8); return; } // inside a cube the grid already keeps everything apart
   const B = [], decay = Math.pow(.8, dt), soft = Math.min(1, dt * 6);
-  for (const c of S.vorder || []) { if (c.vis === false || c.s < .1 || c.leaving) continue; const ex = 1 + .9 * c.ex;
+  for (const c of S.vorder || []) { if (c.vis === false || c.s < .1 || c.leaving) continue; const ex = 1; /* spreading its cells does not shove the neighbours: what you were about to click stays where it was */
     B.push({ o: c, r: 1.5 * c.s * ex, h: 1.46 * c.s * ex, y: c.pos.y, m: c === S.sel || c === drag || c.manual ? Infinity : Math.pow(c.s * ex, 3) }); }
   if (lpCells.visible) for (const o of LP.values()) if (!o.dead && o.h > .3) B.push({ o: { pos: v3.set(o.base.x, LPB + o.h / 2, o.base.z).clone(), off: o.off }, r: o.h * .75, h: o.h / 2, y: LPB + o.h / 2, m: Infinity }); // processes stay put; cubes move around them
   for (const b of B) if (b.m !== Infinity) b.o.off.multiplyScalar(decay); // gravity: return home unless blocked

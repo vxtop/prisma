@@ -21,9 +21,11 @@ const MAX_MESSAGE = 20000;
 
 const SYSTEM_PROMPT = `You are the assistant inside a 3D observatory of the user's computer. The user sees a black space where folders are cubes and programs float above them, and everything you inspect lights up in front of them.
 
-- You can only observe, never change the computer. Use the observatory tools (mcp__prisma__*): prisma_ls, prisma_cube, prisma_file, prisma_meta, prisma_system, prisma_tasks, prisma_pulse, prisma_observe.
+- You can only observe, never change the computer. Use the observatory tools (mcp__prisma__*): prisma_show, prisma_ls, prisma_cube, prisma_file, prisma_meta, prisma_system, prisma_tasks, prisma_pulse, prisma_observe.
 - Arrange the view freely: prisma_space creates, switches, renames and closes spaces (a new space is a clean stage for what the user asked), prisma_layout reorders cubes.
-- Show, do not just tell: when you talk about a folder, open it as a cube with prisma_open (expand=true to show its subfolders) and bring it into view with prisma_focus. Close cubes you no longer need with prisma_close.
+- Show, do not just tell. The user must watch the answer happen in the space, so before you write about a folder or a file, put it in front of them with prisma_show: a folder arrives as a cube and is framed (expand=true also shows its subfolders); a file appears as a file cube next to its folder with a preview, and view=true opens it full screen in the viewer (use it when the user asks to see, open or read a file, for the one file that matters most).
+- When the user asks for some files ("show me the config files of X"), show the folder first, then each relevant file with prisma_show (at most a dozen: the space keeps 16 files), and then answer. Folders and files you inspect with prisma_ls, prisma_cube, prisma_meta or prisma_file are also brought into view on their own, but only prisma_show guarantees the user sees exactly what you mean.
+- prisma_open and prisma_focus open and frame cubes without showing files. Close cubes you no longer need with prisma_close.
 - Paths are absolute. The user's home folder is ${os.homedir()}.
 - Answer in the user's language, briefly, and say which cubes you opened.`;
 
@@ -34,6 +36,7 @@ const workPrompt = dir => `You are the assistant inside a 3D observatory of the 
 - Make focused, consistent changes. The application reloads the interface when its files change and restarts its
   server when no turn is running, so the user sees each change within seconds.
 - You can still observe the computer with the observatory tools (mcp__prisma__*).
+- The user watches you work: every file you read or edit appears as a file cube next to its folder. When the user asks to see a file or a folder, or you want to point at the one that matters, call mcp__prisma__prisma_show with its absolute path (view=true opens a file full screen in the viewer).
 - Answer in the user's language, briefly, and end with the list of files you changed.`;
 
 /** A folder Claude may edit: absolute, existing, and never a drive root or the home folder itself. */
@@ -146,10 +149,20 @@ let sessions = {};
 try { sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf8')); } catch {}
 const saveSessions = () => fsp.mkdir(STATE_DIR, { recursive: true }).then(() => fsp.writeFile(SESSIONS_FILE, JSON.stringify(sessions, null, 2))).catch(() => {});
 
-/** Absolute path a file tool works on, so the client can light it up in the space. */
-function absoluteInput(input = {}, dir) {
-  const p = input.file_path || input.path;
-  return p && dir ? path.resolve(dir, String(p)) : null;
+/**
+ * What a tool call works on, so the client can bring it in front of the user: `path` (absolute) and, for the tools
+ * that inspect one folder or one file, `show` ('dir' | 'file'). Tools that arrange the view themselves get no `show`.
+ */
+const FILE_TOOLS = new Set(['Read', 'Write', 'Edit', 'NotebookEdit', 'prisma_file']);
+const DIR_TOOLS = new Set(['Glob', 'Grep', 'prisma_ls', 'prisma_cube', 'prisma_meta', 'prisma_references']);
+function targetOf(tool, input = {}, dir) {
+  const raw = input.file_path || input.notebook_path || input.path || (dir && (tool === 'Glob' || tool === 'Grep') ? dir : '');
+  if (!raw || (!dir && !path.isAbsolute(String(raw)))) return {};
+  const p = dir ? path.resolve(dir, String(raw)) : path.resolve(String(raw));
+  if (/^[\\/]{2}/.test(p) || (!FILE_TOOLS.has(tool) && !DIR_TOOLS.has(tool))) return { path: p }; // network paths are never touched
+  let isDir = DIR_TOOLS.has(tool);
+  try { isDir = fs.statSync(p).isDirectory(); } catch {} // a file about to be written does not exist yet
+  return { path: p, show: isDir ? 'dir' : 'file' };
 }
 
 function summarizeInput(input = {}) {
@@ -249,7 +262,7 @@ async function ask({ message, account: accountId = 'default', fresh = false, wor
       } else if (ev.type === 'stream_event' && ev.event && ev.event.type === 'content_block_delta' && ev.event.delta && ev.event.delta.type === 'text_delta') {
         emit({ ...base, type: 'text', text: ev.event.delta.text });
       } else if (ev.type === 'assistant') {
-        for (const b of (ev.message && ev.message.content) || []) if (b.type === 'tool_use') emit({ ...base, type: 'tool', tool: String(b.name).replace(/^mcp__prisma__/, ''), detail: summarizeInput(b.input), path: absoluteInput(b.input, dir) });
+        for (const b of (ev.message && ev.message.content) || []) if (b.type === 'tool_use') { const tool = String(b.name).replace(/^mcp__prisma__/, ''); emit({ ...base, type: 'tool', tool, detail: summarizeInput(b.input), ...targetOf(tool, b.input || {}, dir) }); }
       } else if (ev.type === 'result') result = ev;
     }
   });

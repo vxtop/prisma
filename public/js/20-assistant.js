@@ -3,11 +3,11 @@
 // Assistant: a prompt bar in the space that talks to Claude through the user's own Claude Code login.
 // Server side in assistant.js; events arrive on the shared stream as { k: 'assistant', type, ... }.
 
-const ASST = { status: null, account: null, busy: false, fresh: false, current: null, open: false, workdir: null, permission: 'ask', perms: new Map() };
+const ASST = { status: null, account: null, busy: false, fresh: false, current: null, open: false, workdir: null, permission: 'ask', perms: new Map(), replay: false, showQ: [], showT: null, shown: null };
 const ASST_TOOLS = {
   prisma_open: 'abre', prisma_close: 'cierra', prisma_focus: 'enfoca', prisma_ls: 'lista', prisma_cube: 'mira el cubo',
   prisma_file: 'lee la ficha', prisma_meta: 'mira la carpeta', prisma_system: 'mira el sistema', prisma_tasks: 'mira las tareas',
-  prisma_pulse: 'mira las sesiones de IA', prisma_observe: 'observa', prisma_references: 'mira las referencias', prisma_index: 'indexa', prisma_layout: 'organiza', prisma_space: 'espacio',
+  prisma_pulse: 'mira las sesiones de IA', prisma_observe: 'observa', prisma_references: 'mira las referencias', prisma_index: 'indexa', prisma_layout: 'organiza', prisma_space: 'espacio', prisma_show: 'enseña',
   Read: 'lee', Write: 'escribe', Edit: 'edita', Glob: 'busca ficheros', Grep: 'busca en el código',
 };
 const asstKey = 'prisma.assistant.account';
@@ -73,7 +73,7 @@ function asstRenderAccount() {
   $('#asst-in').disabled = !ready;
   $('#asst-go').disabled = !ready;
   if (s && !s.installs.length) $('#asst-in').placeholder = s.desktop ? 'Claude Desktop sin Claude Code: ábrelo una vez en la pestaña Code' : 'Instala Claude Code para hablar con Claude';
-  else if (s && !a) $('#asst-in').placeholder = 'Inicia sesión en Claude Code (claude → /login) para hablar con Claude';
+  else if (s && !a) $('#asst-in').placeholder = 'Inicia sesión para hablar con Claude (claude → /login)';
 }
 
 async function asstLoad() {
@@ -87,7 +87,8 @@ function asstReplay() {
   const a = ASST.status && ASST.status.accounts.find(x => x.id === ASST.account);
   $('#asst-log').replaceChildren();
   ASST.perms.clear();
-  for (const ev of (a && a.history) || []) onAssistant({ ...ev, account: a.id });
+  ASST.replay = true; // the transcript comes back, the scene stays as it is
+  try { for (const ev of (a && a.history) || []) onAssistant({ ...ev, account: a.id }); } finally { ASST.replay = false; }
   asstSetBusy(!!(a && a.busy));
   asstShow(false);
 }
@@ -97,7 +98,7 @@ function onAssistant(m) {
   if (m.type === 'start') {
     asstSetBusy(true);
     asstLine('me', m.message);
-    if (m.workdir) asstLine('note', `Trabajando en ${m.workdir}` + (m.permission ? ` · ${ASST_PERMS[m.permission] || m.permission}` : ''));
+    if (m.workdir) { asstLine('note', `Trabajando en ${m.workdir}` + (m.permission ? ` · ${ASST_PERMS[m.permission] || m.permission}` : '')); asstFollow(m.workdir, true); }
     ASST.current = null;
   } else if (m.type === 'text') {
     ASST.current = ASST.current || asstLine('ai', '');
@@ -109,6 +110,7 @@ function onAssistant(m) {
     const verb = ASST_TOOLS[m.tool] || m.tool;
     asstLine('tool', `${verb} ${m.detail || ''}`.trim());
     feed('IA', '#D97757', `Claude ${verb} ${base(m.detail || '')}`.trim());
+    if (m.show) asstFollow(m.path, m.show === 'dir');
   } else if (m.type === 'permission') {
     ASST.current = null;
     asstPermission(m);
@@ -120,6 +122,43 @@ function onAssistant(m) {
     asstSetBusy(false);
     ASST.current = null;
   }
+}
+
+// --- The scene follows Claude ---
+// What Claude inspects or edits comes in front of the user: its folder as a framed cube, the file as a file cube next to
+// it with its preview. One step at a time, and a burst keeps only its last few, so fifty reads in a row neither thrash
+// the camera nor churn the file objects (the space keeps 16). It never pulls the user out of another view or the viewer.
+const ASST_SHOW_MS = 900, ASST_SHOW_KEEP = 4;
+function asstFollow(p, dir) {
+  if (ASST.replay || !p) return;
+  const k = K(p), q = ASST.showQ;
+  if ((ASST.shown === k && !q.length) || q.some(x => K(x.path) === k)) return;
+  q.push({ path: p, dir }); if (q.length > ASST_SHOW_KEEP) q.splice(0, q.length - ASST_SHOW_KEEP);
+  if (!ASST.showT) asstFollowNext();
+}
+function asstFollowNext() {
+  ASST.showT = null; const x = ASST.showQ.shift(); if (!x) return;
+  ASST.showT = setTimeout(asstFollowNext, ASST_SHOW_MS);
+  if (VIEW.cur !== 'espacio' || VW.o) return;
+  const k = K(x.path); ASST.shown = k;
+  if (inside()) { const f = !x.dir && asstInFile(k); if (f && IN.sel !== f) inSelect(f); return; } // inside a case only its own files are pointed at
+  let c = x.dir ? S.cubes.get(k) : null; if (x.dir && (!c || c.vis === false)) c = cubeOfPath(x.path); // already here, or inside a cube that is: frame that one instead of opening more
+  if (c) { if (S.sel !== c || OB.sel) { OB.sel = null; select(c, true); } return; }
+  post('/api/show', { path: x.path, auto: true, by: 'ia' }).catch(() => {});
+}
+const asstInFile = k => IN.files.find(f => f.path && K(f.path) === k && !f.dead && !f.hidden && !f.summary) || null;
+
+/** The server asks the page to bring something in front of the user (the prisma_show tool, or the queue above). */
+async function onShow(m) {
+  const k = K(m.path), until = async ok => { for (let i = 0; i < 30 && !ok(); i++) await new Promise(r => setTimeout(r, 100)); return ok(); };
+  if (VW.o && K(VW.o.path) !== k) exitViewer(true);
+  if (VIEW.cur !== 'espacio') setView('espacio');
+  if (inside()) { const f = !m.dir && !m.view && asstInFile(k); if (f) return inSelect(f); if (!m.dir) for (let i = 0; i < 8 && leaveLevel(); i++); } // file cubes live at the top level
+  if (m.dir) { const c = await until(() => S.cubes.get(k)); if (c) { OB.sel = null; select(c, true); } return; }
+  const c = await until(() => cubeOfPath(m.path));
+  if (c && performance.now() - c.born < 800) await new Promise(r => setTimeout(r, 800)); // let a cube that has just arrived land before the file is born out of it
+  await openObject(m.path, true);
+  const o = OB.list.find(x => K(x.path) === k); if (o && m.view) enterViewer(o);
 }
 
 /** Line diff good enough for an edit preview: common head and tail kept as context, the middle shown as − / +. */
@@ -148,7 +187,7 @@ function asstPermission(m) {
   el.querySelector('.yes').addEventListener('click', () => answer(true));
   el.querySelector('.no').addEventListener('click', () => answer(false));
   ASST.perms.set(m.id, el);
-  if (p.path) feed('IA', '#D97757', `Claude pide permiso para ${verb} ${base(p.path)}`);
+  if (p.path) { feed('IA', '#D97757', `Claude pide permiso para ${verb} ${base(p.path)}`); if (/^([a-z]:)?[\\/]/i.test(p.path)) asstFollow(p.path, false); } // the file it wants to change, in view while you decide
   el.scrollIntoView({ block: 'end' });
 }
 
@@ -233,4 +272,4 @@ addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLower
 $('#asst-in').addEventListener('input', e => asstDraft.save(e.target.value));
 { const draft = asstDraft.load(); if (draft) { const input = $('#asst-in'); input.value = draft; input.focus(); input.setSelectionRange(draft.length, draft.length); } }
 asstLoad();
-S.asst = { state: ASST, on: onAssistant }; // test hook
+S.asst = { state: ASST, on: onAssistant, show: onShow }; // test hook

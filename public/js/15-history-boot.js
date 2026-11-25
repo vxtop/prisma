@@ -41,7 +41,7 @@ history.replaceState({ prisma: 1, root: true }, ''); history.pushState(navState(
 resize(); requestAnimationFrame(tick); renderTop();
 const es = new EventSource('/api/events');
 es.onmessage = ev => { const m = JSON.parse(ev.data);
-  if (m.k === 'fg') onFg(m); else if (m.k === 'state') { applyState(m); if (m.fg && (!S.fg || S.fg.t !== m.fg.t)) onFg(m.fg); } else if (m.k === 'proc') onProcEv(m); else if (m.k === 'fs') onFs(m); else if (m.k === 'index') onIndex(m); else if (m.k === 'assistant') onAssistant(m); else if (m.k === 'reload') devReload(m); else if (m.k === 'fit') { if (VIEW.cur === 'espacio' && !S.sel) setTimeout(fitAll, 500); }
+  if (m.k === 'fg') onFg(m); else if (m.k === 'state') { applyState(m); if (m.fg && (!S.fg || S.fg.t !== m.fg.t)) onFg(m.fg); } else if (m.k === 'proc') onProcEv(m); else if (m.k === 'fs') onFs(m); else if (m.k === 'index') onIndex(m); else if (m.k === 'assistant') onAssistant(m); else if (m.k === 'show') onShow(m).catch(() => {}); else if (m.k === 'reload') devReload(m); else if (m.k === 'fit') { if (VIEW.cur === 'espacio' && !S.sel) setTimeout(fitAll, 500); }
   else if (m.k === 'log') feed(m.by === 'ia' ? 'IA' : 'usuario', m.by === 'ia' ? '#D97757' : '#1768B5', `${m.action} ${base(m.target)}`); };
 api('/api/version').then(v => { if (v.running !== v.disk) feedStale(); }).catch(() => feedStale()); // older servers have no /api/version
 function feedStale() { const b = document.createElement('div'); b.id = 'stale'; b.innerHTML = '<b>Prisma se ha actualizado</b> pero el servidor en marcha es el anterior: cierra esta ventana y vuelve a abrir <b>prisma.vbs</b>.'; document.body.appendChild(b); }

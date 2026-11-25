@@ -8,26 +8,28 @@ function setCanvasTex(o) { const old = o.tex; o.tex = new THREE.CanvasTexture(o.
 const fmtT = s => !isFinite(s) ? '—' : `${s / 60 | 0}:${String(s % 60 | 0).padStart(2, '0')}`;
 function drawHi(o) { // high-resolution text texture for reading in the viewer
   const i = o.info, cv = o.cv, g = cv.getContext('2d'), W = cv.width, H = cv.height, col = KIND_COL[i.kind] || '#888', top = 84;
-  g.fillStyle = '#07090b'; g.fillRect(0, 0, W, H); g.fillStyle = col; g.fillRect(0, 0, W, 5); g.textAlign = 'left';
+  g.fillStyle = '#0f1216'; g.fillRect(0, 0, W, H); g.fillStyle = col; g.fillRect(0, 0, W, 5); g.textAlign = 'left';
   g.font = '600 24px "Segoe UI",sans-serif'; g.fillStyle = rgba(col, .95); g.fillText((KIND_TXT[i.kind] || i.kind).toUpperCase() + (i.ext ? ' · .' + i.ext : ''), 28, 48);
   g.fillStyle = 'rgba(200,208,214,.75)'; g.textAlign = 'right'; g.fillText(fmtB(i.size) + (i.lines ? ' · ' + i.lines + ' líneas' : ''), W - 28, 48); g.textAlign = 'left';
   g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(28, 64, W - 56, 1);
-  if (i.table) { const rows = i.table, cols = Math.min(7, Math.max(...rows.map(r => r.length))), cw = (W - 56) / cols, lh = 34, nl = Math.floor((H - top - 20) / lh) - 1; o.vlines = rows.length; o.vpage = nl;
-    const show = [rows[0], ...rows.slice(1 + o.scroll, 1 + o.scroll + nl)]; g.font = '18px "Cascadia Mono",Consolas,monospace';
-    show.forEach((r, k) => { if (!k) { g.fillStyle = rgba(col, .16); g.fillRect(28, top, W - 56, lh); } for (let c = 0; c < cols; c++) { g.fillStyle = k ? 'rgba(230,234,237,.9)' : col; g.fillText(String(r[c] ?? '').slice(0, Math.floor(cw / 11) - 1), 36 + c * cw, top + 24 + k * lh); } g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(28, top + lh + k * lh, W - 56, 1); }); }
-  else if (i.json) { const lh = 32, nl = Math.floor((H - top - 20) / lh); o.vlines = i.json.length; o.vpage = nl; g.font = '19px "Cascadia Mono",Consolas,monospace';
-    i.json.slice(o.scroll, o.scroll + nl).forEach(([k, v], j) => { g.fillStyle = '#D97757'; g.fillText(k.slice(0, 26), 36, top + 24 + j * lh); g.fillStyle = 'rgba(214,220,224,.85)'; g.fillText(v.slice(0, 62), 340, top + 24 + j * lh); }); }
-  else if (i.text != null) { const ls = i.text.split('\n'), lh = 29, nl = Math.floor((H - top - 20) / lh); o.vlines = ls.length; o.vpage = nl; g.font = '19px "Cascadia Mono",Consolas,monospace';
-    ls.slice(o.scroll, o.scroll + nl).forEach((l, k) => { const y = top + 22 + k * lh; g.fillStyle = 'rgba(130,140,146,.55)'; g.fillText(String(o.scroll + k + 1).padStart(4), 14, y); tokLine(g, l.replace(/\t/g, '  ').slice(0, 110), 84, y, W - 16); }); }
-  else if (i.hex) { const by = i.hex.match(/../g) || [], lh = 30; o.vlines = 0; g.font = '19px "Cascadia Mono",Consolas,monospace';
+  if (i.table) { const rows = i.table, cols = Math.min(7, Math.max(...rows.map(r => r.length))), cw = (W - 56) / cols, lh = 40, nl = Math.floor((H - top - 20) / lh) - 1; o.vlines = rows.length; o.vpage = nl;
+    const show = [rows[0], ...rows.slice(1 + o.scroll, 1 + o.scroll + nl)]; g.font = '22px "Cascadia Mono",Consolas,monospace';
+    show.forEach((r, k) => { if (!k) { g.fillStyle = rgba(col, .16); g.fillRect(28, top, W - 56, lh); } for (let c = 0; c < cols; c++) { g.fillStyle = k ? 'rgba(230,234,237,.9)' : col; g.fillText(String(r[c] ?? '').slice(0, Math.floor(cw / 13.5) - 1), 36 + c * cw, top + 27 + k * lh); } g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(28, top + lh + k * lh, W - 56, 1); }); }
+  else if (i.json) { const lh = 36, nl = Math.floor((H - top - 20) / lh); o.vlines = i.json.length; o.vpage = nl; g.font = '23px "Cascadia Mono",Consolas,monospace';
+    i.json.slice(o.scroll, o.scroll + nl).forEach(([k, v], j) => { g.fillStyle = '#a9c6ea'; g.fillText(k.slice(0, 26), 36, top + 24 + j * lh); g.fillStyle = 'rgba(230,234,237,.9)'; g.fillText(v.slice(0, 66), 420, top + 24 + j * lh); }); }
+  else if (i.text != null) { const ls = i.text.split('\n'), lh = 34, nl = Math.floor((H - top - 20) / lh); o.vlines = ls.length; o.vpage = nl; g.font = '23px "Cascadia Mono",Consolas,monospace';
+    ls.slice(o.scroll, o.scroll + nl).forEach((l, k) => { const y = top + 22 + k * lh; g.fillStyle = 'rgba(150,160,168,.7)'; g.fillText(String(o.scroll + k + 1).padStart(4), 14, y); tokLine(g, l.replace(/\t/g, '  ').slice(0, 96), 96, y, W - 16); }); }
+  else if (i.hex && !MEDIA_K.has(i.kind)) { const by = i.hex.match(/../g) || [], lh = 30; o.vlines = 0; g.font = '19px "Cascadia Mono",Consolas,monospace';
     for (let r = 0; r < Math.min(Math.floor((H - top) / lh), Math.ceil(by.length / 16)); r++) { const row = by.slice(r * 16, r * 16 + 16), y = top + 24 + r * lh; g.fillStyle = 'rgba(130,140,146,.55)'; g.fillText((r * 16).toString(16).padStart(4, '0'), 20, y);
       g.fillStyle = 'rgba(220,226,230,.88)'; g.fillText(row.join(' '), 96, y); g.fillStyle = rgba(col, .85); g.fillText(row.map(h => { const c = parseInt(h, 16); return c > 31 && c < 127 ? String.fromCharCode(c) : '·'; }).join(''), 720, y); } }
   else if (o.wave) { const N = o.wave.length, mid = H / 2, p = o.audio && o.audio.duration ? o.audio.currentTime / o.audio.duration : 0;
     for (let k = 0; k < N; k++) { const h = o.wave[k] * H * .38, x = 28 + k * (W - 56) / N; g.fillStyle = k / N <= p ? '#D97757' : rgba(col, .85); g.fillRect(x, mid - h, Math.max(1.5, (W - 56) / N - 1), h * 2); } }
   if (i.magic) { g.font = '18px "Segoe UI",sans-serif'; g.fillStyle = 'rgba(170,180,186,.7)'; g.fillText('firma: ' + i.magic, 28, H - 18); }
 }
-const textLike = i => i.text != null || i.table || i.json || i.hex;
-async function pdfPage(o, page, width) {
+const MEDIA_K = new Set(['image', 'video', 'audio', 'model3d']); // these have a real view; their hex dump stays in the panel
+const textLike = i => i.text != null || i.table || i.json || (i.hex && !MEDIA_K.has(i.kind));
+function pdfPage(o, page, width) { return o.pdfQ = (o.pdfQ || Promise.resolve()).catch(() => {}).then(() => pdfPage1(o, page, width)); } // one render at a time on a canvas
+async function pdfPage1(o, page, width) {
   if (!PDFJS) { PDFJS = await import('/vendor/pdfjs/pdf.min.mjs'); PDFJS.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs'; }
   if (!o.pdf) o.pdf = await PDFJS.getDocument({ url: rawURL(o.info.path), isEvalSupported: false }).promise;
   const p = Math.max(1, Math.min(o.pdf.numPages, page)); o.page = p; o.info.pages = o.pdf.numPages;
@@ -37,7 +39,7 @@ async function pdfPage(o, page, width) {
 }
 function hiRes(o) { const i = o.info;
   if (i.ext === 'pdf') return pdfPage(o, o.page || 1, 1500).catch(e => feed('error', '#C52235', 'PDF: ' + e.message));
-  if (textLike(i) || o.wave) { o.cv.width = 1100; o.cv.height = o.wave ? 560 : 1400; o.aspect = o.cv.width / o.cv.height; drawHi(o); setCanvasTex(o); } }
+  if (textLike(i) || o.wave) { o.cv.width = o.wave ? 1100 : 1400; o.cv.height = o.wave ? 560 : 1400; o.aspect = o.cv.width / o.cv.height; drawHi(o); setCanvasTex(o); } }
 function lowRes(o) { const i = o.info;
   if (i.ext === 'pdf') return pdfPage(o, 1, 640).catch(() => {});
   if (textLike(i) || o.wave) { o.cv.width = 512; o.cv.height = 640; o.aspect = .8; drawCard(o); setCanvasTex(o); } }
@@ -46,11 +48,11 @@ function enterViewer(o) {
   if (!o) return; if (VIEW.cur !== 'espacio') setView('espacio'); if (VW.o && VW.o !== o) exitViewer(true);
   OB.sel = o; S.mode = 'obj'; if (!VW.o) VW.prev = { p: camera.position.clone(), t: controls.target.clone() }; VW.o = o; o.view = true; o.scroll = o.scroll || 0;
   document.body.classList.add('viewer'); applyView(); hideMenu(); $('#tip').style.display = 'none';
-  setFog(o.mesh, false); if (o.model) setFog(o.model, false); scene.fog.density = .2; particles.visible = false; controls.enableRotate = !!o.model; bloom.strength = 0;
+  setFog(o.mesh, false); if (o.model) setFog(o.model, false); scene.fog.density = .2; particles.visible = false; controls.enableRotate = false; // a 3D model turns itself under the pointer (22-graphene); the camera stays put bloom.strength = 0;
   hiRes(o); renderVbar(); setTimeout(viewerFrame, 60);
 }
 function viewerFrame() { const o = VW.o; if (!o) return; // frames the object, leaving room for the viewer bar and the strip
-  const vf = camera.fov * Math.PI / 180, t = Math.tan(vf / 2), fracV = Math.max(.4, (innerHeight - 200) / innerHeight), asp = innerWidth / innerHeight;
+  const vf = camera.fov * Math.PI / 180, t = Math.tan(vf / 2), fracV = Math.max(.4, (innerHeight - 270) / innerHeight), asp = innerWidth / innerHeight;
   const hh = o.model ? 3 : 4, w = o.model ? 3 : hh * o.aspect, d = Math.max(hh / 2 / t / fracV, w / 2 / (t * asp) / .9);
   focusT.copy(o.pos); focusDir = camera.position.clone().sub(controls.target).normalize(); focusD = d; focusSel = false; focusing = true; }
 function exitViewer(noFly) {

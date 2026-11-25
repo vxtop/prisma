@@ -14,6 +14,8 @@
   ],
   "license": "Apache-2.0",
   "author": "virtuanista",
+  "homepage": "https://vxtop.github.io/prisma/",
+  "repository": { "type": "git", "url": "git+https://github.com/vxtop/prisma.git" },
   "bin": {
     "prisma": "server.js",
     "prisma-mcp": "mcp.js"

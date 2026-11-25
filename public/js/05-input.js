@@ -19,8 +19,8 @@ function pick(e) {
   if (VIEW.cur === 'sistema') { const n = sysPick(e.clientX, e.clientY); return n ? { node: n } : null; }
   if (VIEW.cur === 'tareas') { const it = taskPick(e.clientX, e.clientY); return it ? { task: it } : null; }
   if (VIEW.cur === 'arbol') { const n = trPick(); return n ? { tn: n } : null; }
-  const oh = ray.intersectObjects(OB.list.map(o => o.mesh), false)[0], cb = pickCube();
-  if (oh && (!cb || oh.distance * oh.distance < cb.d)) return { o: OB.list.find(o => o.mesh === oh.object) };
+  const oh = ray.intersectObjects(OB.list.flatMap(o => o.mesh.visible && o.s > .5 ? [o.cube, o.mesh] : [o.cube]), false)[0], cb = pickCube(); // a file: its cube, or its preview
+  if (oh && (!cb || oh.distance * oh.distance < cb.d)) return { o: OB.list.find(o => o.cube === oh.object || o.mesh === oh.object) };
   const fb = inside() ? inPick() : null; if (fb && (!cb || fb.d < cb.d)) return { f: fb.f, d: fb.d }; // files inside the cube you are in
   return cb;
 }
@@ -44,7 +44,7 @@ function handleMove() {
   else if (h && h.node) html = nodeTip(h.node);
   else if (h && h.tn) html = trTip(h.tn);
   else if (h && h.task) { const it = h.task; html = `<b>${esc(it.label)}</b><br><span style="color:var(--dim)">${esc(it.kind === 'perf' ? it.fmt(it.val()) : it.sub)}</span>`; }
-  if (html) { tip.innerHTML = html + '<br><span style="color:rgba(255,255,255,.3)">' + (h && h.f ? 'clic · doble clic abre' : h && h.c ? 'clic · doble clic entra · Esc sube' : 'clic') + ' · clic derecho</span>'; tip.style.display = 'block'; tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + 'px'; tip.style.top = e.clientY + 14 + 'px'; canvas.style.cursor = 'pointer'; }
+  if (html) { tip.innerHTML = html + '<br><span style="color:rgba(255,255,255,.3)">' + (h && h.f ? 'clic: verlo' : h && h.c ? 'clic: ficha · Enter: entrar · Esc: subir' : 'clic') + ' · clic derecho: menú</span>'; tip.style.display = 'block'; tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + 'px'; tip.style.top = e.clientY + 14 + 'px'; canvas.style.cursor = 'pointer'; }
   else { tip.style.display = 'none'; canvas.style.cursor = ''; }
 }
 canvas.addEventListener('pointerup', e => {
@@ -53,40 +53,31 @@ canvas.addEventListener('pointerup', e => {
   if (performance.now() - (S.selT || 0) < 450) return; S.selT = performance.now(); // a habitual double click does not deselect: the second click is ignored
   // a single click does everything: select, center and open or expand
   const lp = pickLP(e.clientX, e.clientY); if (lp) return clickLater(() => { selectLP(lp); const c0 = new THREE.Vector3(lp.base.x, LPB + lp.h / 2, lp.base.z), lk = (lp.p.links || []).map(l => S.cubes.get(K(l))).filter(Boolean).slice(0, 4).map(c => c.pos.clone());
-    focusOn([c0.clone().addScalar(2.5), c0.clone().subScalar(2.5), ...lk], .5, 10, false, c0); }, () => inEnterProg(lp)); // click: the program in the center, the folders it uses around it; double click: inside it
+    focusOn([c0.clone().addScalar(2.5), c0.clone().subScalar(2.5), ...lk], .5, 10, false, c0); }); // click: the program in the center, the folders it uses around it
   const m = pick(e); if (!m) return deselect();
   if (m.node) { const n = m.node.n; if (n.kind === 'group-root') { const k = String(n.pid); G.open.has(k) ? G.open.delete(k) : G.open.add(k); pollSystem(); } else if (n.kind === 'group') { G.openG.add(String(n.pid)); feed('despliega', '#8b95a3', n.name + ' ×' + n.count); pollSystem(); }
     selectNode(m.node); const nb = [m.node.pos.clone()]; for (const [a, b] of G.edges) { const o = a === m.node.id ? G.nodes.get(b) : b === m.node.id ? G.nodes.get(a) : null; if (o && nb.length < 12) nb.push(o.pos.clone()); }
     return focusOn(nb.length > 1 ? nb : [m.node.pos.clone().addScalar(4), m.node.pos.clone().subScalar(4)], .55, 16, false, m.node.pos.clone()); }
   if (m.tn) { trToggle(m.tn); return trSelect(m.tn); } // tree folder: expand or collapse immediately
   if (m.task) { selectTask(m.task); const z = TKS.zones.find(q => q.k === m.task.zone); return focusOn(z ? [new THREE.Vector3(z.c.x - ZW / 2, 0, z.c.z - ZD / 2), new THREE.Vector3(z.c.x + ZW / 2, 4, z.c.z + ZD / 2)] : [new THREE.Vector3(m.task.x, 0, m.task.z)], .7, 18, false, new THREE.Vector3(m.task.x, 0, m.task.z)); }
-  if (m.o) { selectObj(m.o, false); return enterViewer(m.o); } // a file opens in the viewer
-  if (m.f) return clickLater(() => inSelect(m.f), () => inOpen(m.f)); // a file inside the cube: select it, or open it
+  if (m.o) { selectObj(m.o, false); return enterViewer(m.o); } // one thing, one cube: a click goes straight to looking at it
+  if (m.f) { inSelect(m.f); if (m.f.path && !m.f.summary && !['proc', 'net', 'mod', 'link'].includes(m.f.grp)) inOpen(m.f); return; } // a file inside the cube: its card, and the viewer
   const c = m.c;
   if (e.ctrlKey || e.metaKey) return toggleMulti(c);
-  clickLater(() => { if (S.multi.size) { S.multi.clear(); renderCubes(); } if (c !== S.sel || S.mode !== 'cube') { c.cell = null; IN.sel = null; select(c, false); focusOn(cubeBox(c), .62, 9, true); } }, // select and centre
-    () => enterCube(c)); // go inside
+  if (S.multi.size) { S.multi.clear(); renderCubes(); } if (c !== S.sel || S.mode !== 'cube') { c.cell = null; IN.sel = null; select(c, false); focusOn(cubeBox(c), .62, 9, true); } // select and centre
 });
-// A click and a double click never overlap: the single action waits for the double-click interval, and a double click replaces it
-const DBL_MS = 280; let clickT = 0, clickPend = null;
-function clickLater(single, double) { clearTimeout(clickT); clickPend = { single, double, t: performance.now() }; clickT = setTimeout(() => { const p = clickPend; clickPend = null; if (p) p.single(); }, DBL_MS); }
-// double click: on a cube, one level down (its subfolders and files as cubes inside it); on a file, the viewer. Esc climbs back up until the top level
-canvas.addEventListener('dblclick', e => { e.preventDefault(); if (VIEW.cur !== 'espacio' || VW.o) return; clearTimeout(clickT); const p = clickPend; clickPend = null;
-  if (p && performance.now() - p.t < 700) return p.double(); const m = pick(e); if (m && m.c) enterCube(m.c); else if (m && m.f) inOpen(m.f); });
+// No double click: a click selects, frames and opens the card; entering, viewing and playing are in the context menu (right click) and Enter does the first of them. Esc climbs back up.
+let clickT = 0, clickPend = null;
+function clickLater(single) { single(); }
+canvas.addEventListener('dblclick', e => e.preventDefault());
 canvas.addEventListener('contextmenu', e => {
-  e.preventDefault(); if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const lpc = pickLP(e.clientX, e.clientY); if (lpc) return menu(e.clientX, e.clientY, lpMenu(lpc)); const m = pick(e); if (!m) return;
+  e.preventDefault(); if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; const lpc = pickLP(e.clientX, e.clientY); if (lpc) { selectLP(lpc); return radialFor({ lp: lpc }, e.clientX, e.clientY); } const m = pick(e); if (!m) return; // right click: the context menu of what is under the pointer
   if (m.node) return menu(e.clientX, e.clientY, nodeMenu(m.node));
   if (m.tn) { trSelect(m.tn); return menu(e.clientX, e.clientY, trMenu(m.tn)); }
   if (m.task) return menu(e.clientX, e.clientY, taskMenu(m.task));
-  if (m.o) return menu(e.clientX, e.clientY, objMenu(m.o));
-  if (m.f) return menu(e.clientX, e.clientY, [['Abrir en el visor', () => inOpen(m.f), 'doble clic'], ['Seleccionar', () => inSelect(m.f)], '-', ['Copiar ruta', () => copy(m.f.path)]]);
-  const c = m.c, files = c.data ? c.data.cells.flatMap(x => x.top || []).sort((a, b) => b.mtime - a.mtime) : [];
-  menu(e.clientX, e.clientY, [[`Seleccionar ${c.name}`, () => select(c, true)], ['Entrar', () => enterCube(c), 'doble clic'],
-    ...(files.length ? [['Abrir su archivo más reciente', () => openObject(c.path + SEP(c.path) + files[0].rel), base(files[0].rel)]] : []), '-',
-    ['Ver en árbol (como tree)', () => trOpen(c.path), 'A'], ['Desplegar 1 nivel', () => openDeep(c.path, 1)], ['Desplegar 2 niveles', () => openDeep(c.path, 2)], ['Desplegar 3 niveles', () => openDeep(c.path, 3)],
-    ...(c.data && c.data.preset && c.data.preset.keyFiles.length ? [['Abrir archivos clave', () => presetOpen(c, 'key'), c.data.preset.types[0][1]]] : []), ...(c.data && c.data.preset && c.data.preset.media ? [['Abrir galería de medios', () => presetOpen(c, 'media')]] : []),
-    ['Explorar esta carpeta', () => { setLeft('explorer'); exGo(c.path); }], ['Indexar (carga completa)', () => startIx(c.path)], '-',
-    ['Copiar ruta', () => copy(c.path)], ['Cerrar cubo', () => post('/api/close', { path: c.path }).catch(() => {})]]);
+  if (m.o) { if (OB.sel !== m.o) selectObj(m.o, false); return radialFor({ o: m.o }, e.clientX, e.clientY); }
+  if (m.f) { if (IN.sel !== m.f) inSelect(m.f); return radialFor({ f: m.f }, e.clientX, e.clientY); }
+  if (m.c) { if (S.sel !== m.c) { m.c.cell = null; IN.sel = null; select(m.c, false); } return radialFor({ c: m.c }, e.clientX, e.clientY); }
 });
 addEventListener('keydown', e => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable || e.ctrlKey || e.metaKey || e.altKey) return; const k = e.key.toLowerCase();

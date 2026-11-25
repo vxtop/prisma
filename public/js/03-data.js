@@ -6,11 +6,13 @@
 // === Data ===
 let layT = 0;
 // kind of each cube, from its contents (server template) and location; shown on the lid emblem and in the tint
-const KINDS = { unidad: ['#AEB9C5', '◉', 'Unidad'], ia: ['#D97757', '✦', 'Trabajado con IA'], codigo: ['#5aa2ea', '</>', 'Proyecto de código'], medios: ['#E6B844', '▶', 'Medios'],
+const KINDS = { unidad: ['#AEB9C5', '◉', 'Unidad'], ia: ['#D97757', '✦', 'Trabajado con IA'], codigo: ['#5aa2ea', '</>', 'Proyecto de código'], medios: ['#b79cf5', '▶', 'Medios'],
   sistema: ['#8b95a3', '⚙', 'Sistema'], app: ['#269B65', '▣', 'Datos de programas'], temporal: ['#6a7381', '◷', 'Temporal o caché'], descargas: ['#7fb8ef', '↓', 'Descargas'], usuario: ['#F0EBDD', '★', 'Carpeta personal'] };
 function cubeKind(c) { const p = K(c.path).replace(/\//g, '\\'), t = c.data && c.data.preset ? c.data.preset.types.map(x => x[0]) : [];
-  if (t.includes('unidad') || /^[a-z]:\\?$/.test(p)) return 'unidad'; if (t.includes('ia') || /\\\.claude(\\|$)/.test(p)) return 'ia';
+  if (t.includes('unidad') || /^[a-z]:\\?$/.test(p)) return 'unidad';
   if (t.some(x => ['node', 'python', 'rust', 'go', 'git'].includes(x))) return 'codigo'; if (t.includes('medios')) return 'medios';
+  // «worked with AI» only for folders about AI (.claude, CLAUDE.md, AGENTS.md); a session merely touching a folder shows on its links instead
+  const mk = (c.data && c.data.markers) || []; if (/\\\.claude(\\|$)/.test(p) || mk.some(m => m === '.claude' || m === 'CLAUDE.md' || m === 'AGENTS.md')) return 'ia';
   if (/(\\|^)(temp|tmp|cache|caches|code cache|gpucache|crashpad|logs?)(\\|$)/.test(p)) return 'temporal';
   if (/^[a-z]:\\(windows|program files( \(x86\))?|programdata|\$recycle\.bin|system volume information)(\\|$)/.test(p)) return 'sistema';
   if (/\\appdata\\|\\\.config(\\|$)/.test(p)) return 'app'; if (/\\(downloads|descargas)(\\|$)/.test(p)) return 'descargas';
@@ -36,13 +38,11 @@ function dimFocus() { for (const c of S.cubes.values()) dimOne(c); }
 function applyKind(c) { const k = cubeKind(c), g = cubeGem(c); if (k === c.kind && g === c.gem && c.emb && c.kindData === !!c.data) return; c.kindData = !!c.data; c.kind = k; c.gem = g;
   gemBody(c);
   c.cc0 = CC.slice(c.slot * 81, c.slot * 81 + 81); dimOne(c); cellsIM.instanceColor.addUpdateRange(c.slot * 81, 81); cellsIM.instanceColor.needsUpdate = true;
-  if (!c.emb) { c.emb = new THREE.Mesh(scrGeo, new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false, depthWrite: false })); c.emb.renderOrder = 2; scene.add(c.emb); }
-  c.emb.material.map = k ? kindTexOf(k) : null; c.emb.material.needsUpdate = true; c.emb.visible = !!k; drawLabel(c); }
+  if (!c.emb) { c.emb = symMesh(); scene.add(c.emb); } // its symbol, engraved on every face and glowing in its gem
+  c.emb.material.map = symTex(k || 'g-' + (g || 'folder'), k === 'ia' ? '#D97757' : k === 'medios' ? '#b79cf5' : GEM_HEX[g || 'folder'][1]); /* Claude's colour only for what Claude worked on */ c.emb.material.needsUpdate = true; drawLabel(c); }
 /** The 27 cells share the cube's gem as a dark polished metal; empty cells keep their size but sink into shadow. */
-function gemBody(c) {
-  const col = GEM[c.gem || 'folder'][0];
-  for (let i = 0; i < 27; i++) { const o = (c.slot * 27 + i) * 3, cd = c.data && c.data.cells[i], e = cd && !cd.files ? .45 : 1;
-    CC[o] = (.012 + col.r * .13) * e; CC[o+1] = (.012 + col.g * .13) * e; CC[o+2] = (.014 + col.b * .13) * e; }
+function gemBody(c) { // every body is the same graphene; the gem lives in the symbol
+  for (let i = 0; i < 27; i++) { const o = (c.slot * 27 + i) * 3; CC[o] = GRAPHENE.r; CC[o+1] = GRAPHENE.g; CC[o+2] = GRAPHENE.b; }
 }
 function applyScan(c, d) {
   c.data = d; c.lastScan = Date.now(); c.evCount = Math.max(c.evCount, d.events || 0);

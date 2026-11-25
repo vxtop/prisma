@@ -82,7 +82,7 @@ function trPick() { let best = null, bd = Infinity;
 const trInfo = n => `${n.b != null ? fmtB(n.b) + (n.part ? '+' : '') : '—'} · ${fmtN(n.f || 0)} arch.${n.k ? ' · ' + fmtN(n.k) + ' carp.' : ''}`;
 const trTip = n => `<b>${esc(n.name)}</b><br><span style="color:var(--dim)">${esc(trInfo(n))}${n.k ? (n.open ? ' · clic contrae' : ' · clic despliega') : ''}${n.skip ? ' · pesada, no se abre sola' : ''}</span>`;
 function trMenu(n) { const up = n.path.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, '');
-  return [[n.open ? 'Contraer' : 'Desplegar', () => trToggle(n), 'doble clic'], ['Desplegar todo debajo · 3 niveles', () => trExpand(n, 3)], ['Desplegar todo debajo · 6 niveles', () => trExpand(n, 6)], ['Contraer todo debajo', () => trCollapse(n)], '-',
+  return [[n.open ? 'Contraer' : 'Desplegar', () => trToggle(n)], ['Desplegar todo debajo · 3 niveles', () => trExpand(n, 3)], ['Desplegar todo debajo · 6 niveles', () => trExpand(n, 6)], ['Contraer todo debajo', () => trCollapse(n)], '-',
     ['Ver esta carpeta como raíz', () => trOpen(n.path)], ...(n === TR.root && up && up !== n.path ? [['Subir a la carpeta superior', () => trOpen(/^[a-z]:$/i.test(up) ? up + '\\' : up)]] : []),
     ['Abrir como cubo en el Espacio', () => { setView('espacio'); post('/api/open', { path: n.path }).catch(e => feed('error', '#C52235', e.message)); }], ['Explorar esta carpeta', () => { setLeft('explorer'); exGo(n.path); }], ['Indexar (tamaños completos)', () => startIx(n.path)], '-', ['Copiar ruta', () => copy(n.path)]]; }
 function renderTreePanel() {

@@ -19,7 +19,7 @@ controls.maxPolarAngle = Math.PI * .485; controls.dampingFactor = .07; controls.
 canvas.addEventListener('wheel', e => { S.autoFit = false; if (S.follow) { S.fz = Math.max(.3, Math.min(6, (S.fz || 1) * (e.deltaY > 0 ? 1.15 : .87))); return; } focusing = false; focusDir = null; }, { passive: true });
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
 const key = new THREE.DirectionalLight(0xdfe7ee, 1.1); key.position.set(8, 14, 10); scene.add(key);
-scene.add(new THREE.HemisphereLight(0x1c2a30, 0x050505, .55));
+scene.add(new THREE.HemisphereLight(0x8f9aa6, 0x23272d, .95)); // soft, even fill: matte bodies read on every face, not only the lit one
 const rim = new THREE.DirectionalLight(0x7ec4c8, .45); rim.position.set(-12, 7, -14); scene.add(rim); // rim light: separates cubes from the background
 const FLOOR = -3.6;
 const hovGeo = new THREE.BufferGeometry(); hovGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(48 * 3), 3));
@@ -35,7 +35,21 @@ const hovBr = new THREE.LineSegments(hovGeo, new THREE.LineBasicMaterial({ color
 const MAXC = 256, SPF = 16, VPC = 27 * SPF; // must match the server's MAX_CUBES
 const cellGeo = new RoundedBoxGeometry(1, 1, 1, 2, .07);
 const glowAttr = new THREE.InstancedBufferAttribute(new Float32Array(MAXC * 27 * 3), 3); glowAttr.setUsage(THREE.DynamicDrawUsage); cellGeo.setAttribute('aGlow', glowAttr);
-const cellMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .62, roughness: .38, envMapIntensity: .55 });
+const subAttr = new THREE.InstancedBufferAttribute(new Float32Array(MAXC * 27), 1); subAttr.setUsage(THREE.DynamicDrawUsage); cellGeo.setAttribute('aSub', subAttr); // 1 = this cell is itself a cube of 27 (grooves cut each face in 3×3)
+const GM = { m: .04, r: .94, e: .22 }, EDGE_K = .55; // dry matte graphite: no metal, no gloss, a faint lighter bevel
+const cellMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: GM.m, roughness: GM.r, envMapIntensity: GM.e }); // matte graphene, every cube the same
+const GRAPHENE = new THREE.Color('#59606b'); // the one body colour of every cube; what a cube is shows in its symbol, not its body
+// Graphene lattice: a fine honeycomb on every face that catches the light only where the shimmer passes (needs vLocal from withEdges)
+function withGraphene(sh, shine) {
+  sh.fragmentShader = sh.fragmentShader.replace('void main() {', `float hexLine(vec2 p) { p *= 9.0; const vec2 s = vec2(1.0, 1.7320508);
+  vec4 hc = floor(vec4(p, p - vec2(.5, 1.)) / s.xyxy) + .5; vec4 h = vec4(p - hc.xy * s, p - (hc.zw + .5) * s);
+  vec2 g = dot(h.xy, h.xy) < dot(h.zw, h.zw) ? h.xy : h.zw; vec2 q = abs(g); float d = max(dot(q, s * .5), q.x);
+  float fw = max(fwidth(p.x), fwidth(p.y)), w = max(0.045, fw * 1.25); // lines never thinner than a pixel, and the lattice melts away with distance instead of sparkling
+  return (1.0 - smoothstep(0.0, w, 0.5 - d)) * (1.0 - smoothstep(0.10, 0.34, fw)); }
+void main() {`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+  { vec3 a = abs(vLocal); vec2 uv = a.x >= a.y && a.x >= a.z ? vLocal.yz : a.y >= a.z ? vLocal.xz : vLocal.xy;
+    float hx = hexLine(uv); totalEmissiveRadiance += vec3(.56, .62, .69) * hx * (0.05 + ${shine}); }`);
+}
 // Lit edges: every cube's edges catch a thin line of its own colour (local position on the unit box, on the GPU; needs instance colours)
 function withEdges(sh, k) {
   sh.vertexShader = 'varying vec3 vLocal;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vLocal = position;');
@@ -45,12 +59,14 @@ function withEdges(sh, k) {
 const shimmer = { value: 0 };
 cellMat.onBeforeCompile = sh => {
   sh.uniforms.uTime = shimmer;
-  sh.vertexShader = 'attribute vec3 aGlow;\nvarying vec3 vGlow;\nvarying float vShine;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-  vGlow = aGlow;
+  sh.vertexShader = 'attribute vec3 aGlow;\nattribute float aSub;\nvarying vec3 vGlow;\nvarying float vSub;\nvarying float vShine;\nuniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+  vGlow = aGlow; vSub = aSub;
   float cell = mod(float(gl_InstanceID), 27.0), slot = floor(float(gl_InstanceID) / 27.0);
   vShine = pow(max(0.0, sin(uTime * 0.85 - dot(position, vec3(2.6, 3.8, 2.0)) - slot * 0.37)), 8.0); // a band of light sweeping across the cube's faces`);
-  sh.fragmentShader = 'varying vec3 vGlow;\nvarying float vShine;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += vGlow + vColor * vShine * 0.55;');
-  withEdges(sh, 2.2);
+  sh.fragmentShader = 'varying vec3 vGlow;\nvarying float vSub;\nvarying float vShine;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += vGlow;')
+    .replace('#include <color_fragment>', `#include <color_fragment>
+  if (vSub > 0.5) { vec3 a = abs(vLocal); vec2 uv = a.x >= a.y && a.x >= a.z ? vLocal.yz : a.y >= a.z ? vLocal.xz : vLocal.xy; vec2 q = abs(abs(uv) - 1.0 / 6.0); float gr = 1.0 - smoothstep(0.012, 0.03, min(q.x, q.y)); diffuseColor.rgb *= 1.0 - 0.82 * gr; }`);
+  withEdges(sh, EDGE_K); withGraphene(sh, '0.0');
 };
 const cellsIM = new THREE.InstancedMesh(cellGeo, cellMat, MAXC * 27);
 cellsIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage); cellsIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAXC * 27 * 3), 3);
@@ -101,8 +117,11 @@ function stepParticles(t) {
 // --- Text sprites ---
 function textSprite(w = 1024, h = 128) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false })); sp.userData = { ctx: cv.getContext('2d'), tex, w, h }; return sp; }
-function drawText(sp, lines) { const { ctx: g, tex, w, h } = sp.userData; let tw = 0; g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle';
-  lines.forEach(([txt, size, col, y]) => { g.font = `600 ${size}px "Segoe UI",system-ui,sans-serif`; g.fillStyle = col; let t = txt; while (g.measureText(t).width > w - 20 && t.length > 4) t = t.slice(0, -2); if (t !== txt) t += '…'; g.fillText(t, w / 2, y); tw = Math.max(tw, g.measureText(t).width); }); sp.userData.tw = (tw + 16) / w; tex.needsUpdate = true; }
+function drawText(sp, lines) { const { ctx: g, tex, w, h, plate } = sp.userData; let tw = 0; g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle';
+  const fit = lines.map(([txt, size, col, y]) => { g.font = `600 ${size}px "Segoe UI",system-ui,sans-serif`; let t = txt; while (g.measureText(t).width > w - 36 && t.length > 4) t = t.slice(0, -2); if (t !== txt) t += '…'; tw = Math.max(tw, g.measureText(t).width); return [t, size, col, y]; });
+  if (plate && fit.length) { const y0 = Math.max(1, Math.min(...fit.map(f => f[3] - f[1] * .72))), y1 = Math.min(h - 1, Math.max(...fit.map(f => f[3] + f[1] * .72))), pw = Math.min(w - 2, tw + 32); // a matte plate so the text reads over anything
+    g.fillStyle = 'rgba(11,13,17,.74)'; g.beginPath(); g.roundRect((w - pw) / 2, y0, pw, y1 - y0, 14); g.fill(); g.strokeStyle = 'rgba(174,185,197,.14)'; g.lineWidth = 2; g.stroke(); }
+  fit.forEach(([t, size, col, y]) => { g.font = `600 ${size}px "Segoe UI",system-ui,sans-serif`; g.fillStyle = col; g.fillText(t, w / 2, y); }); sp.userData.tw = (tw + 16) / w; tex.needsUpdate = true; }
 const glowTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.18, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })();
 
@@ -115,7 +134,7 @@ const grain = new ShaderPass({ uniforms: { tDiffuse: { value: null }, uT: { valu
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float uT; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); float v = smoothstep(1.05, .3, length(vUv - .5) * 1.3); float n = fract(sin(dot(vUv * 913.7 + uT, vec2(12.9898, 78.233))) * 43758.5453); c.rgb = c.rgb * mix(.66, 1.0, v) + (n - .5) * .022; gl_FragColor = c; }' });
 composer.addPass(grain);
 function applyView() { // centers the scene in the free area between panels (no panels in the viewer)
-  const w = innerWidth, h = innerHeight, viewer = document.body.classList.contains('viewer'), rv = !viewer && $('#right').style.display === 'flex';
+  const w = innerWidth, h = innerHeight, viewer = document.body.classList.contains('viewer'), rv = !viewer && !document.body.classList.contains('holo') && $('#right').style.display === 'flex'; // a floating panel (hologram mode) takes no room
   const L = viewer ? 0 : $('#left').offsetWidth + 10, R = rv ? $('#right').offsetWidth + 10 : 0, shift = (L - R) / 2;
   document.body.classList.toggle('noright', !rv); camera.aspect = w / h; camera.setViewOffset(w, h, -shift, viewer ? -24 : 0, w, h); camera.updateProjectionMatrix(); }
 // on-screen sprite size with sizeAttenuation off: pixel height -> scale

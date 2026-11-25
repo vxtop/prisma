@@ -45,6 +45,11 @@ const { makeFixture, startServer, reporter } = require('./helpers');
     const answer = await asked;
     t.ok('a permission request waits for the user and returns the approved input', !unknown.ok && decided.ok && answer.behavior === 'allow' && answer.updatedInput.new_string === 'y', answer.behavior);
 
+    const show = async b => { const r = await fetch(srv.url + 'api/show', { method: 'POST', headers: H, body: JSON.stringify(b) }); return { status: r.status, ...(await r.json()) }; };
+    const shownFile = await show({ path: path.join(fx.dirs[5], 'README.md'), view: true, by: 'ia' }), shownDir = await show({ path: fx.dirs[6], by: 'ia' }), shownNone = await show({ path: path.join(fx.work, 'nope.txt') });
+    const open = (await (await fetch(srv.url + 'api/state')).json()).cubes.map(c => c.path);
+    t.ok('showing a file opens its folder as a cube, showing a folder opens it', shownFile.shown === 'visor' && shownDir.shown === 'cubo' && open.includes(fx.dirs[5]) && open.includes(fx.dirs[6]) && shownNone.status === 400, shownFile.shown + ' · ' + shownDir.shown + ' · ' + shownNone.status);
+
     const cube = await (await fetch(srv.url + 'api/cube?t=' + srv.token + '&path=' + encodeURIComponent(fx.dirs[0]))).json();
     t.ok('a folder is read as a 27-cell cube', Array.isArray(cube.cells) && cube.cells.length === 27, (cube.totals && cube.totals.files) + ' files');
     const media = await (await fetch(srv.url + 'api/media?t=' + srv.token + '&path=' + encodeURIComponent(fx.dirs[0]))).json();

@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 · Copyright 2026 virtuanista -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prisma: habla con Claude en un espacio 3D</title>
+<meta name="description" content="Prisma es una interfaz 3D para trabajar con Claude en tu equipo. Deriva de vxtop y es un proyecto propio.">
+<meta property="og:title" content="Prisma: habla con Claude en un espacio 3D">
+<meta property="og:description" content="Cada carpeta es un cubo y todo lo que Claude mira o cambia ocurre delante de ti.">
+<meta property="og:image" content="https://vxtop.github.io/prisma/assets/hero.png">
+<link rel="canonical" href="https://vxtop.github.io/prisma/">
+<link rel="icon" href="assets/logo.svg">
+<style>
+:root { --bg: #0c0e13; --panel: #151921; --line: #2b313c; --tx: #c3c9d2; --pearl: #f0ebdd; --blue: #6fb1ee; --green: #55c893; --gold: #e6b844; --ruby: #f0687a; --claude: #d97757; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+body { margin: 0; background: var(--bg); color: var(--tx); font: 17px/1.6 "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 1120px; margin: auto; padding-inline: 20px; }
+a { color: var(--pearl); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+nav { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; padding-block: 18px; }
+nav img { width: 34px; height: 34px; } nav b { color: var(--pearl); font-size: 20px; margin-right: auto; }
+h1, h2, h3 { color: var(--pearl); line-height: 1.15; letter-spacing: -.02em; margin: 0; }
+header { padding-top: 56px; } h1 { font-size: clamp(38px, 6vw, 68px); max-width: 14ch; } header p { font-size: 20px; max-width: 58ch; margin: 20px 0 28px; }
+.btn { display: inline-block; padding: 11px 20px; border-radius: 7px; border: 1px solid var(--pearl); text-decoration: none; margin: 0 8px 8px 0; } .btn.p { background: var(--pearl); color: var(--bg); }
+figure { margin: 36px 0 0; } figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; } figcaption { font-size: 15px; margin-top: 8px; }
+section { padding-top: 96px; } h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 14px; } h3 { font-size: 20px; margin-bottom: 6px; } section > p { max-width: 62ch; }
+.row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 48px; align-items: center; margin-top: 40px; } .row figure { margin: 0; } .row.alt figure { order: -1; } .row.alt { grid-template-columns: 1.35fr 1fr; }
+.scroll { overflow-x: auto; } table { border-collapse: collapse; width: 100%; min-width: 640px; margin-top: 24px; } th, td { text-align: left; vertical-align: top; padding: 13px 16px 13px 0; border-bottom: 1px solid var(--line); } thead th { color: var(--pearl); font-size: 20px; } tbody th { font-weight: 400; width: 22%; } td { width: 39%; color: var(--pearl); }
+ul { padding: 0; list-style: none; } .gems li { display: grid; grid-template-columns: 16px 110px 1fr; gap: 14px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); } .gems i { width: 16px; height: 16px; transform: rotate(45deg) scale(.8); }
+pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; overflow-x: auto; font: 15px/1.6 Consolas, monospace; color: var(--pearl); }
+footer { margin-top: 96px; padding-block: 28px 48px; border-top: 1px solid var(--line); text-align: center; font-size: 15px; } footer img { max-width: 100%; }
+@media (max-width: 760px) { .row, .row.alt { grid-template-columns: 1fr; gap: 20px; } .row.alt figure { order: 0; } header { padding-top: 28px; } section { padding-top: 64px; } .gems li { grid-template-columns: 16px 90px 1fr; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Principal"><img src="assets/logo.svg" alt=""><b>Prisma</b><a href="#diferencias">Prisma y vxtop</a><a href="#empezar">Empezar</a><a href="https://github.com/vxtop/prisma">GitHub</a></nav>
+<header>
+  <h1>Habla con Claude en un espacio 3D</h1>
+  <p>Cada carpeta es un cubo. Lo que Claude mira se abre delante de ti, y, por defecto, cada cambio espera tu permiso.</p>
+  <a class="btn p" href="#empezar">Empezar</a><a class="btn" href="https://github.com/vxtop/prisma">Ver código</a>
+  <figure><img src="assets/hero.png" width="1580" height="680" alt="Carpetas y archivos como cubos de grafeno en el espacio de Prisma"></figure>
+</header>
+<main>
+<section>
+  <h2>Pregunta, mira y decide</h2>
+  <div class="row"><div><h3>Observar</h3><p>Es el modo por defecto. Claude solo puede mirar: inspecciona carpetas, archivos y procesos, y responde abriendo y enfocando cubos.</p></div><figure><img loading="lazy" src="assets/inside.png" alt="Interior de una carpeta, con los archivos agrupados por tipo"><figcaption>Dentro de una carpeta, cada archivo es un cubo.</figcaption></figure></div>
+  <div class="row alt"><figure><img loading="lazy" src="assets/permission.png" alt="Permiso de edición con las líneas que cambian"><figcaption>Captura de las pruebas: una edición denegada.</figcaption></figure><div><h3>Trabajar</h3><p>Claude edita solo dentro de la carpeta que elijas y nunca ejecuta programas. Puedes revisar cada cambio, aceptar las ediciones o pedir solo un plan.</p></div></div>
+</section>
+<section id="diferencias">
+  <h2>Dos proyectos, dos maneras de usarlos</h2>
+  <p>Prisma nació de <a href="https://vxtop.github.io/">vxtop</a> y ambos son de virtuanista. Se instalan por separado y no comparten datos.</p>
+  <div class="scroll"><table>
+    <thead><tr><td></td><th scope="col">Prisma</th><th scope="col"><a href="https://vxtop.github.io/">vxtop</a></th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Para qué</th><td>Hablar y trabajar con Claude</td><td>Observar qué hace tu equipo</td></tr>
+      <tr><th scope="row">Puede cambiar archivos</th><td>Sí, en modo trabajo y en una carpeta</td><td>No, nunca</td></tr>
+      <tr><th scope="row">Carpetas</th><td>Cubos a los que se entra, con cubos dentro</td><td>Cubos de 27 celdas de datos</td></tr>
+      <tr><th scope="row">Color</th><td>El tipo de contenido, como gemas</td><td>Quién toca cada archivo</td></tr>
+      <tr><th scope="row">Al abrir</th><td>Un espacio vacío y la barra de Claude</td><td>La vista en vivo del equipo</td></tr>
+      <tr><th scope="row">Necesita Claude Code</th><td>Sí, para el asistente</td><td>No</td></tr>
+      <tr><th scope="row">Puerto y datos</th><td>4828 y ~/.prisma</td><td>4827 y ~/.vxtop</td></tr>
+    </tbody>
+  </table></div>
+</section>
+<section>
+  <h2>Un color para cada cosa</h2>
+  <ul class="gems">
+    <li><i style="background:#1768B5"></i><b>Zafiro</b><span>Código</span></li><li><i style="background:#269B65"></i><b>Esmeralda</b><span>Datos</span></li><li><i style="background:#E6B844"></i><b>Oro</b><span>Documentos y medios</span></li><li><i style="background:#AEB9C5"></i><b>Plata</b><span>Carpetas, unidades y otros programas</span></li><li><i style="background:#C52235"></i><b>Rubí</b><span>Ejecutables, borrados y errores</span></li><li><i style="background:#D97757"></i><b>Claude</b><span>Conserva su propio color</span></li>
+  </ul>
+</section>
+<section id="empezar">
+  <h2>Empezar</h2>
+  <p>Necesitas Node.js 18.15 o superior y Chrome o Edge. Para el asistente, Claude Code con la sesión iniciada. Windows es la plataforma más completa, Linux funciona y macOS no está probado.</p>
+  <pre>git clone https://github.com/vxtop/prisma.git
+cd prisma
+node server.js        # http://127.0.0.1:4828/</pre>
+  <p>Para probarlo con archivos ficticios, usa <code>npm run demo</code>. En Windows, <code>prisma.vbs</code> abre su propia ventana.</p>
+  <p>El servidor solo escucha en tu equipo. Al usar el asistente, Claude Code envía a Anthropic lo que preguntas y lo que Claude consulta.</p>
+  <a class="btn" href="https://github.com/vxtop/prisma/blob/main/docs/guia.md">Leer la guía</a><a class="btn" href="https://github.com/vxtop/prisma/blob/main/docs/assistant.md">Cómo funciona el asistente</a>
+</section>
+</main>
+<footer><p>Prisma, proyecto de <a href="https://virtuanista.github.io/">virtuanista</a>. Apache 2.0. No está afiliado a Anthropic ni a Prisma ORM.</p><img src="https://open.soniditos.com/cat_footer.svg" alt="Gatito"><p>Copyright © 2026</p></footer>
+</div>
+</body>
+</html>

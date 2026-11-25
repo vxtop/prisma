@@ -86,7 +86,8 @@ function declutterLabels(items, max = 40) {
 let cubeDecl = 0;
 function declutterCubes(dt) { cubeDecl += dt; if (cubeDecl < .12) return; cubeDecl = 0;
   declutterLabels([...S.cubes.values()].filter(c => c.vis !== false && !(c.dimF < 1)).map(c => ({ pos: c.label.position, w: (c === S.sel ? 46 : c.depth ? 34 : 40) * 8 * (c.label.userData.tw || .6), h: c === S.sel ? 46 : c.depth ? 34 : 40,
-    pr: c === S.sel || (S.hover && S.hover.c === c) ? 1e16 : (c.labelOn ? 5e14 : 0) + (c.depth ? 0 : 1e12) + (c.data ? c.data.totals.bytes : 0), set: v => c.labelOn = v })), 30); }
+    pr: c === S.sel || (S.hover && S.hover.c === c) ? 1e16 : (c.labelOn ? 5e14 : 0) + (c.depth ? 0 : 1e12) + (c.data ? c.data.totals.bytes : 0), set: v => c.labelOn = v }))
+    .concat(OB.list.filter(o => o.cs > .3).map(o => ({ pos: o.label.position, w: 44 * 8 * (o.label.userData.tw || .4), h: 44, pr: o === OB.sel || o === OB.hover ? 9e15 : (o.labelOn ? 4e14 : 0) + 1e9 + (o.info.size || 0), set: v => o.labelOn = v }))), 44); }
 // label priority: selected, Claude, machine, most RAM, most connections
 function declutter() {
   return declutterLabels([...G.nodes.values()].map(nd => { const sel = nd === G.sel || nd === G.hover, lh = sel ? 54 : nd.depth === 0 || nd.n.kind === 'core' ? 46 : 38; /* must match the rendered label height */

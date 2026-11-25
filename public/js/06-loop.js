@@ -7,7 +7,7 @@
 const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches; // no travelling shimmer for people who ask for less motion
 const clock = new THREE.Clock(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), camR = new THREE.Vector3();
 const selTrack = { c: null, p: new THREE.Vector3() };
-let uiAcc = 0, fpsAcc = 0, fpsN = 0, slowT = 0, fastT = 0;
+let uiAcc = 0, fpsAcc = 0, fpsN = 0, slowT = 0, fastT = 0; if (/[?&]debug\b/.test(location.search)) document.body.classList.add('debug');
 function tick() {
   requestAnimationFrame(tick); if (document.body.classList.contains('gal')) { clock.getDelta(); return; } // the media gallery covers the space: no 3D frames meanwhile
   const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime, now = Date.now(), kf = 1 - Math.pow(.0006, dt);
@@ -27,7 +27,7 @@ function tick() {
     let tgt = c.home;
     if (c.manual) tgt = c.manual;
     else if (c.rel) { const p = c.rel.p.pos, a = c.rel.a + t * c.rel.spin, Rr = c.rel.R + 1.5 * c.rel.p.s * .9 * c.rel.p.ex; tgt = tmp.set(p.x + Math.cos(a) * Rr, p.y + Math.sin(a) * Rr * c.rel.tilt, p.z + Math.sin(a) * Rr); } // when a parent opens, its children move with it
-    let ts = c.vis === false || c.leaving || performance.now() < (c.born || 0) ? .001 : c.tScale;
+    let ts = c.vis === false || c.leaving || performance.now() < (c.born || 0) ? .001 : c.tScale * lvK(c);
     if (c.leaving && performance.now() - c.leaving > 650) { gone.push(c); continue; }
     if (S.space === 'vivo' && c.act && c.vis !== false) { const cool = vivoCool(c), heat = vivoHeat(c); if (cool) { tgt = tmp2.copy(tgt); tgt.y -= cool * 1.6; ts *= 1 - .32 * cool; }
       else if (heat > .05 && c !== S.sel) ts *= 1 + .022 * heat * Math.sin(t * (1.1 + 2.2 * heat) + c.seq); } // subtle breathing, faster with more activity
@@ -37,7 +37,7 @@ function tick() {
     if (!c.data && c.vis !== false) { for (let i = 0; i < 27; i++) c.pulse[i] = Math.max(c.pulse[i], .2 * (.5 + .5 * Math.sin(t * 5 - i * .45))); c.cellDirty = true; } // reading: a wave across the cells
     { const ph = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360)), rp = 1.6 * c.s * ph / Math.max(.1, camera.position.distanceTo(c.pos)), prox = Math.min(1, Math.max(0, (rp - 170) / 330));
       const deep = c.deepT && Date.now() - c.deepT < 6000 ? .25 : 0, quietN = S.follow && S.followC && c !== S.followC && c !== S.sel, want = quietN ? 0 : c === S.sel && S.exploded ? 1 : Math.min(.85, (c === S.sel ? Math.max(OPEN_EX, prox * .6) : prox * .5) + deep);
-      c.rp = rp; c.ex = 0; } // one body: it no longer opens into cells // the closer, the more it opens; a deep change opens it briefly
+      c.rp = rp; { const wx = ((S.hover && S.hover.c === c) || c === S.sel) && c.lv > 0 && c.key !== S.enter ? .6 : 0; /* …and a click keeps it open */ c.ex += (wx - c.ex) * Math.min(1, dt * 9); if (c.ex < .002) c.ex = 0; } } // the pointer resting on a cube of 27 spreads its cells apart // one body: it no longer opens into cells // the closer, the more it opens; a deep change opens it briefly
     const L = c.last; if (geo || L[0] !== c.pos.x || Math.abs(L[1] - c.pos.y) + Math.abs(L[2] - c.pos.z) > 1e-5 || Math.abs(L[3] - c.s) > 1e-5 || Math.abs(L[4] - c.ex) > 1e-5) {
       if (geo || isNaN(L[0]) || Math.abs(L[0] - c.pos.x) + Math.abs(L[1] - c.pos.y) + Math.abs(L[2] - c.pos.z) + Math.abs(L[3] - c.s) + Math.abs(L[4] - c.ex) > 2e-5) writeCube(c);
       L[0] = c.pos.x; L[1] = c.pos.y; L[2] = c.pos.z; L[3] = c.s; L[4] = c.ex; }
@@ -46,7 +46,7 @@ function tick() {
     if (pk || c.cellDirty || geo) { c.cellDirty = false; const b0 = c.slot * 27, hv = S.hover && S.hover.c === c ? S.hover.idx : -1, sc = c === S.sel ? c.cell : -1;
       { let ht = 0, pu = 0; for (let i = 0; i < 27; i++) { ht += c.heat[i]; pu = Math.max(pu, c.pulse[i]); } // the whole body glows with its activity
         const col = c.flashC && pu > .03 ? c.flashC : GEM[c.gem || 'folder'][1]; if (pu <= .03) c.flashC = null;
-        const h = Math.min(.6, ht * .012 + pu * .7 + (hv >= 0 ? .05 : 0)) * (c.dimF || 1); for (let i = 0; i < 27; i++) { const o = (b0 + i) * 3, v = i === 13 ? h : 0; CG[o] = col.r * v; CG[o+1] = col.g * v; CG[o+2] = col.b * v; } }
+        const h = 0; c.puV = Math.min(1, pu * 1.4); /* activity no longer tints the graphene body: it lights the symbol (below) */ /* graphene barely warms with activity: the body stays the colour of every other cube */ for (let i = 0; i < 27; i++) { const o = (b0 + i) * 3, v = i === 13 ? h : 0; CG[o] = col.r * v; CG[o+1] = col.g * v; CG[o+2] = col.b * v; } }
       glowAttr.addUpdateRange(b0 * 3, 81); glowAttr.needsUpdate = true; }
     // windows: base color + flashes
     let vk = 0; if (c.colDirty || geo) vk = 1; else for (let k = 0; k < c.nv; k++) if (c.vheat[k] > 0) { vk = 1; break; }
@@ -57,13 +57,13 @@ function tick() {
     const par = c.parent && S.cubes.get(K(c.parent));
     if (par && c.vis !== false && par.vis !== false && par.key !== S.enter) { lp[ln*6] = par.pos.x; lp[ln*6+1] = par.pos.y; lp[ln*6+2] = par.pos.z; lp[ln*6+3] = c.pos.x; lp[ln*6+4] = c.pos.y; lp[ln*6+5] = c.pos.z; ln++; }
     if (c.emb === undefined) applyKind(c);
-    if (c.emb && c.kind) { const sp = (1 + .9 * c.ex) * c.s; c.emb.visible = c.vis !== false && c.key !== S.enter && c.s > .08 && !c.leaving && VIEW.cur === 'espacio' && !VW.o; c.emb.position.set(c.pos.x, c.pos.y + sp + .47 * c.s, c.pos.z); c.emb.scale.setScalar(c.s * 1.2); }
-    const lab = c.label, lh = c === S.sel ? 46 : c.depth ? 34 : 40; lab.position.set(c.pos.x, c.pos.y + (c.key === S.enter ? Math.max(IN.cur / 2, 1.5) + .25 : 1.72 * c.s + .12), c.pos.z); lab.scale.set(pxScale(lh) * 8, pxScale(lh), 1); lab.visible = c.labelOn !== false && c.vis !== false && c.s > .08 && !c.leaving && !(c.dimF < 1) && !(S.layout === 'stack' && c.depth && c !== S.sel && !(S.hover && S.hover.c === c)); { const fam = !S.sel || c === S.sel || (c.parent && K(c.parent) === S.sel.key) || (S.sel.parent && K(S.sel.parent) === c.key); lab.material.opacity += ((fam ? 1 : .32) - lab.material.opacity) * kf; }
+    if (c.emb) { c.emb.visible = c.vis !== false && c.key !== S.enter && c.s > .08 && !c.leaving && VIEW.cur === 'espacio' && !VW.o; c.emb.position.copy(c.pos); c.emb.geometry = c.lv > 0 ? SYM_S : SYM_GEO; c.emb.material.color.setScalar(.74 + .8 * (c.puV || 0) + (c === S.sel ? .7 + .3 * Math.sin(performance.now() / 260) : 0)); /* activity and selection light the symbol */ c.emb.scale.setScalar(c.s * 2.92 * (S.hover && S.hover.c === c ? 1.04 : 1) * (1 + .733 * c.ex)); c.emb.material.opacity = 1 - .55 * c.ex; } // the symbol sits on the faces of the body (same edge as writeCube)
+    const lab = c.label, lh = c === S.sel ? 46 : c.depth ? 34 : 40; lab.position.set(c.pos.x, c.pos.y + (c.key === S.enter ? Math.max(IN.cur / 2, 1.5) + .25 : 1.72 * c.s + .12), c.pos.z); lab.scale.set(pxScale(lh) * 8, pxScale(lh), 1); lab.visible = S.radC !== c && c.labelOn !== false && c.vis !== false && c.s > .08 && !c.leaving && !(c.dimF < 1) && !(S.layout === 'stack' && c.depth && c !== S.sel && !(S.hover && S.hover.c === c)); { const fam = !S.sel || c === S.sel || (c.parent && K(c.parent) === S.sel.key) || (S.sel.parent && K(S.sel.parent) === c.key); lab.material.opacity += ((fam ? 1 : .32) - lab.material.opacity) * kf; }
   }
   linkGeo.setDrawRange(0, ln * 2); linkGeo.attributes.position.needsUpdate = true; inStep(dt, kf);
   if (gone.length) { gone.forEach(c => { if (S.cubes.get(c.key) === c) dropCube(c); }); layout(); renderCubes(); $('#empty').style.display = S.cubes.size || VIEW.cur !== 'espacio' ? 'none' : 'block'; } // once fully empty, the welcome prompt appears
   if (VIEW.cur === 'espacio') spaceBodies(dt);
-  stepProbes(dt, t, now); stepObjects(dt); stepSystem(dt); stepTasks(dt); stepTree(dt);
+  stepProbes(dt, t, now); stepObjects(dt); stepLinks(); radialTick(); stepHolo(dt); stepSystem(dt); stepTasks(dt); stepTree(dt);
   stepParticles(t); if (VIEW.cur === 'espacio') declutterCubes(dt); peekTick();
   { // brackets on the hovered cube
     const hc = S.hover && S.hover.c !== S.sel && S.hover.c.vis !== false ? S.hover.c : null; hovBr.visible = !!hc && !VW.o;

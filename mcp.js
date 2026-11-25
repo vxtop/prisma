@@ -35,6 +35,8 @@ const TOOLS = [
     inputSchema: P({ tool_name: { type: 'string' }, input: { type: 'object' }, tool_use_id: { type: 'string' } }, ['tool_name']),
     call: a => waitPost('/api/assistant/permission', { account: process.env.PRISMA_ACCOUNT || 'default', tool: a.tool_name, input: a.input || {} }) },
   { name: 'prisma_focus', description: 'Selecciona y enfoca un cubo abierto en la vista.', inputSchema: P({ path: dir }, ['path']), call: a => api('POST', '/api/focus', { path: a.path, by: 'ia' }) },
+  { name: 'prisma_show', description: 'Enseña algo al usuario, delante de la cámara. Con una carpeta: la abre como cubo (si no lo estaba) y la encuadra; expand=true despliega sus subcarpetas. Con un archivo: lo saca como cubo de archivo junto a su carpeta (abriéndola si hace falta), lo selecciona y muestra su vista previa; view=true lo abre a pantalla completa en el visor. Solo cambia la vista, no toca el disco.',
+    inputSchema: P({ path: { type: 'string', description: 'Ruta absoluta de la carpeta o del archivo' }, view: { type: 'boolean', description: 'Abrir el archivo en el visor' }, expand: { type: 'boolean', description: 'Desplegar las subcarpetas (solo carpetas)' } }, ['path']), call: a => api('POST', '/api/show', { path: a.path, view: !!a.view, expand: !!a.expand, by: 'ia' }) },
 ];
 
 async function api(method, url, data, retry = true) {

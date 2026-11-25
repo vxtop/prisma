@@ -7,6 +7,19 @@ every program floats above them, and whatever Claude looks at or changes lights 
 
 Prisma is built on [vxtop](https://github.com/vxtop/vxtop) by virtuanista (see [NOTICE](NOTICE)).
 
+**[Website](https://vxtop.github.io/prisma/)** · Prisma and vxtop are two separate projects by the same author.
+
+![Folders and files as cubes in Prisma](docs/assets/hero.png)
+
+| | Prisma | [vxtop](https://github.com/vxtop/vxtop) |
+|---|---|---|
+| Purpose | Talk to Claude and work with it | Watch what your computer is doing |
+| Can change files | Yes, in work mode, inside one folder | Never |
+| Folders | Cubes you enter, with cubes inside | Cubes of 27 data cells |
+| Colour means | The kind of content | Who touched each file |
+| Needs Claude Code | For the assistant | No |
+| Port and data | 4828, `~/.prisma` | 4827, `~/.vxtop` |
+
 ## What it does
 
 - **Talk to Claude from the space.** The prompt bar uses the Claude Code you already have installed and logged in
@@ -61,3 +74,19 @@ Data lives in `~/.prisma` (indexes, scenes, token, assistant sessions). Prisma n
 ## License
 
 [Apache-2.0](LICENSE). Keep [NOTICE](NOTICE) when redistributing.
+
+<p align="center">
+	Repositorio generado por <a href="https://github.com/virtuanista" target="_blank">virtu 🎣</a>
+</p>
+
+<p align="center">
+	<img src="https://open.soniditos.com/cat_footer.svg" alt="Gatito" />
+</p>
+
+<p align="center">
+	Copyright &copy; 2026
+</p>
+
+<p align="center">
+	<a href="LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=Apache-2.0&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8" alt="Apache 2.0" /></a>
+</p>

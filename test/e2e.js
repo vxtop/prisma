@@ -2,7 +2,7 @@
 // Copyright 2026 virtuanista
 //
 // End-to-end interaction test in headless Chrome (DevTools protocol, no dependencies):
-// loading, one-click select + centre, habitual double click, empty click, rapid clicks,
+// loading, one-click select + centre, right click opens the context menu, Enter enters, empty click, rapid clicks,
 // wheel zoom, fast view switching, tree expand/collapse, search and a clean reload.
 // Usage: node test/e2e.js [--live]   (--live also checks a program cube in the live space)
 // Screenshots go to test/artifacts/.
@@ -43,7 +43,7 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
     // in-page helpers: screen position of a point, distance from the centre of the free area between panels
     const H = `window.__h = { S: window.__prisma,
       scr(p) { const v = p.clone().project(this.S.camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight, v.z < 1]; },
-      free() { const L = document.querySelector('#left').offsetWidth + 10, R = document.querySelector('#right').style.display === 'flex' ? document.querySelector('#right').offsetWidth + 10 : 0; return [L + (innerWidth - L - R) / 2, innerHeight / 2]; },
+      free() { const L = document.querySelector('#left').offsetWidth + 10, R = document.querySelector('#right').style.display === 'flex' && !document.body.classList.contains('holo') ? document.querySelector('#right').offsetWidth + 10 : 0; /* a card floating beside the cube takes no room */ return [L + (innerWidth - L - R) / 2, innerHeight / 2]; },
       dev(p) { const a = this.scr(p), c = this.free(); return Math.round(Math.hypot(a[0] - c[0], a[1] - c[1])); },
       visibleCube(i) { const L = [...this.S.cubes.values()].filter(c => c.vis !== false && c.s > .3 && c.data).map(c => [c, this.scr(c.pos)]).filter(([, a]) => a[2] && a[0] > 340 && a[0] < 1250 && a[1] > 140 && a[1] < 780); const e = L[i % Math.max(1, L.length)]; return e ? { name: e[0].name, key: e[0].key, x: e[1][0], y: e[1][1] } : null; } }; 1`;
     const settle = async (min = 300) => { await sleep(min); let last = ''; for (let i = 0; i < 60; i++) { const p = await ev(`(() => { const S = window.__prisma; return S ? S.camera.position.toArray().concat(S.controls.target.toArray()).map(v => v.toFixed(2)).join() : ''; })()`); if (p && p === last) return; last = p; await sleep(250); } };
@@ -64,21 +64,24 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
     if (c) { await click(c.x, c.y); await sleep(250); await click(c.x, c.y); await settle(1200); const r = await selState();
       t.ok('click: cube selected', r.sel === c.key, r.sel); t.ok('click: panel open', r.panel === 'flex'); t.ok('click: cube centred', r.dev >= 0 && r.dev < 60, r.dev + ' px off'); await shot('02-selected'); }
 
-    // ---- levels: a double click goes inside a cube, Esc climbs back and stops at the top ----
-    const dbl = async (x, y) => { await click(x, y); await mouse('mousePressed', x, y, { button: 'left', clickCount: 2 }); await mouse('mouseReleased', x, y, { button: 'left', clickCount: 2 }); };
+    // ---- levels: click + Enter goes inside a cube (no double click), right click opens the context menu; Esc climbs back and stops at the top ----
+    const rclick = async (x, y) => { await mouse('mouseMoved', x, y); await mouse('mousePressed', x, y, { button: 'right', clickCount: 1 }); await mouse('mouseReleased', x, y, { button: 'right', clickCount: 1 }); };
+    const dbl = async (x, y) => { await click(x, y); await sleep(1500); const [sx, sy] = await J('window.__h.scr(window.__prisma.sel.pos)'); await rclick(sx, sy); await sleep(500);
+      t.ok('menu: right click opens the context menu', await ev("document.getElementById('ctx').style.display === 'block' && document.querySelectorAll('#ctx [data-i]').length > 3"));
+      await shot('02a-ring'); await key('Escape', 'Escape'); await sleep(200); await key('Enter', 'Enter'); };
     await key('Escape', 'Escape'); await key('h', 'KeyH'); await settle(800);
     const lc = await J('window.__h.visibleCube(0)');
     if (lc) { const single = await ev('[...window.__prisma.cubes.values()].filter(c => c.vis !== false && c.depth > 0).length');
       t.ok('levels: only top-level cubes are shown', single === 0, single + ' children visible');
       await dbl(lc.x, lc.y); await sleep(2500); const inn = await J(`{ enter: window.__prisma.enter, kids: [...window.__prisma.cubes.values()].filter(c => c.vis !== false && c.key !== window.__prisma.enter).length, files: window.__prisma.IN.files.length, shell: window.__prisma.IN.dims.x, groups: window.__prisma.IN.groups.length }`);
-      t.ok('levels: double click enters the cube', inn.enter === lc.key && inn.kids > 0, inn.kids + ' subfolders'); t.ok('levels: its files are cubes inside its case', inn.files > 0 && inn.shell > 1, inn.files + ' files · ' + inn.groups + ' clusters · case ' + (inn.shell || 0).toFixed(1)); await settle(800); await shot('02b-level');
+      t.ok('levels: Enter enters the selected cube', inn.enter === lc.key && inn.kids > 0, inn.kids + ' subfolders'); t.ok('levels: its files are cubes inside its case', inn.files > 0 && inn.shell > 1, inn.files + ' files · ' + inn.groups + ' clusters · case ' + (inn.shell || 0).toFixed(1)); await settle(800); await shot('02b-level');
       { const dir = await ev('window.__prisma.IN.path'); fs.writeFileSync(path.join(dir, 'nuevo.js'), '// nuevo\n'); fs.unlinkSync(path.join(dir, 'file0.js')); await sleep(3500);
         const live = await J(`{ born: window.__prisma.IN.files.some(f => /nuevo\\.js$/.test(f.path)), gone: !window.__prisma.IN.files.some(f => /file0\\.js$/.test(f.path) && !f.dead), traces: (window.__prisma.TRACES.get(window.__prisma.IN.path.toLowerCase()) || []).length }`);
         t.ok('levels: a new file is born inside and a deleted one leaves a trace', live.born && live.gone && live.traces === 1, JSON.stringify(live)); await shot('02c-live-changes');
         // a file cube: one click opens its card with a preview in the panel
-        const fc = await J(`(() => { const f = window.__prisma.IN.files.find(f => !f.dead && !f.hidden && /file1\\.js$/.test(f.path)); if (!f) return null; const a = window.__h.scr(f.p); return { x: a[0], y: a[1] }; })()`);
+        const fc = await J(`(() => { const S = window.__prisma, f = S.IN.files.filter(f => !f.dead && !f.hidden && /\\.js$/.test(f.path || '')).sort((a, b) => a.p.distanceTo(S.camera.position) - b.p.distanceTo(S.camera.position))[0]; if (!f) return null; const a = window.__h.scr(f.p); return { x: a[0], y: a[1], name: f.name }; })()`); // the nearest one: every item is the same size now, so one behind another is covered
         if (fc) { await click(fc.x, fc.y); await sleep(1800); const card = await J(`{ mode: window.__prisma.mode, pv: !!document.querySelector('#it-pv pre, #it-pv img'), name: document.querySelector('#rn').textContent }`);
-          t.ok('levels: a click on a file shows its card with a preview', card.mode === 'item' && card.pv && /file1\.js/.test(card.name), JSON.stringify(card)); } else t.ok('levels: a file cube is visible', false);
+          t.ok('levels: a click on a file shows its card and opens the viewer', card.name === fc.name && await ev("document.body.classList.contains('viewer')"), JSON.stringify(card)); await key('Escape', 'Escape'); await sleep(900); } else t.ok('levels: a file cube is visible', false);
         // sort and search inside
         await key('o', 'KeyO'); await sleep(300); const so = await ev('window.__prisma.IN.sort');
         await key('/', 'Slash'); await sleep(200); await cdp('Input.insertText', { text: 'file1' }); await sleep(500);
@@ -97,7 +100,7 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
 
     // ---- race: four quick clicks on different cubes; the last one wins ----
     await key('h', 'KeyH'); await settle(800); const seq = [];
-    for (let i = 0; i < 4; i++) { const q = await J(`window.__h.visibleCube(${i * 2 + 1})`); if (!q) continue; q.under = await ev(`window.__prisma.pickAt(${q.x}, ${q.y})`); seq.push(q); await click(q.x, q.y); await sleep(520); }
+    for (let i = 0; i < 4; i++) { const q = await J(`window.__h.visibleCube(${i * 2 + 1})`); if (!q) continue; q.under = await ev(`document.elementFromPoint(${q.x}, ${q.y}) === document.getElementById('gl') ? window.__prisma.pickAt(${q.x}, ${q.y}) : null`); /* a point under the floating card is a click on the card, not on a cube */ seq.push(q); await click(q.x, q.y); await sleep(520); }
     await settle(1500); const r4 = await selState(), last = [...seq].reverse().find(q => q.under && q.under !== 'lp' && q.under !== 'obj');
     t.ok('rapid clicks: the last cube clicked stays selected', seq.length && (!last || r4.sel === last.under), seq.map(s => s.name).join(' → '));
     t.ok('rapid clicks: the camera ends centred on it', r4.dev >= 0 && r4.dev < 60, r4.dev + ' px off');
@@ -142,6 +145,20 @@ const GL = process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftsh
       const el = document.querySelector('#asst .al.perm'); const r = { del: el.querySelectorAll('.del').length, add: el.querySelectorAll('.add').length, buttons: el.querySelectorAll('.pa button').length };
       A.on({ k: 'assistant', account: 'default', type: 'decided', id: 'e2e', allow: false }); r.done = el.classList.contains('denied'); return r; } catch (er) { return String(er); } })()`);
     t.ok('assistant: permission card shows the diff and its answer', permCard && permCard.del === 1 && permCard.add === 1 && permCard.buttons === 2 && permCard.done, JSON.stringify(permCard));
+
+    // ---- assistant: what Claude touches comes into view (its folder framed, the file as a file cube), and prisma_show opens the viewer ----
+    await key('Escape', 'Escape'); await sleep(300);
+    const fA = path.join(fx.dirs[0], 'README.md'), fB = path.join(fx.dirs[1], 'file1.js'), tool = (name, p, show) => `window.__prisma.asst.on({ k: 'assistant', account: 'default', type: 'tool', tool: '${name}', detail: ${JSON.stringify(p)}, path: ${JSON.stringify(p)}, show: '${show}' })`;
+    await ev(tool('prisma_ls', fx.dirs[0], 'dir')); await sleep(1500);
+    const folSel = await ev('window.__prisma.sel && window.__prisma.sel.path');
+    await ev(tool('prisma_file', fA, 'file')); await settle(2500);
+    const fol = await J(`(() => { const S = window.__prisma, o = S.OB.sel; return { obj: o && o.path, n: S.OB.list.length, dev: o ? window.__h.dev(o.pos) : -1 }; })()`);
+    t.ok('assistant: the folder Claude lists is framed and the file it reads appears as a file cube in view', folSel === fx.dirs[0] && fol.obj === fA && fol.dev >= 0 && fol.dev < 260, JSON.stringify({ folSel, ...fol })); await shot('07-assistant-follow');
+    for (let k = 0; k < 30; k++) await ev(tool('Read', path.join(fx.dirs[9], 'file' + (k % 15) + '.js'), 'file')); await sleep(6000);
+    const burst = await ev('window.__prisma.OB.list.length') - fol.n; t.ok('assistant: a burst of reads shows only its first and last few', burst >= 2 && burst <= 5, burst + ' file cubes for 30 reads');
+    await ev(`fetch('/api/show', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Prisma': document.querySelector('meta[name=prisma]').content }, body: JSON.stringify({ path: ${JSON.stringify(fB)}, view: true, by: 'ia' }) }).then(r => r.ok)`); await sleep(3000);
+    const vw = await J(`{ viewer: document.body.classList.contains('viewer'), sel: window.__prisma.OB.sel && window.__prisma.OB.sel.path }`);
+    t.ok('assistant: prisma_show opens the file in the viewer', vw.viewer && vw.sel === fB, JSON.stringify(vw)); await shot('08-assistant-show'); await key('Escape', 'Escape'); await sleep(600);
 
     // ---- reload without errors ----
     await cdp('Page.reload'); await sleep(6000); t.ok('reload without script errors', errs.length === 0, errs.slice(0, 2).join(' | '));

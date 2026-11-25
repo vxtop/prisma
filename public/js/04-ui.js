@@ -26,11 +26,11 @@ function renderLayers() {
   const s = S.sys, c = S.sel, p = S.procs; if (!s) return;
   const avg = S.cpuHist[S.cpuHist.length - 1] || 0, mu = (s.mem.total - s.mem.free) / s.mem.total, g = s.gpu, dk = (c && c.data && c.data.disk) || s.disk; // no cube: system disk
   $('#L1').textContent = (s.cpuModel || '').replace(/\(R\)|\(TM\)|CPU|Processor|\d+-Core/g, '').replace(/\s+/g, ' ').trim().slice(0, 22);
-  $('#h-cpu').style.width = avg * 100 + '%'; $('#v-cpu').textContent = pct(avg) + ' · ' + s.cpu.length + 'n';
+  $('#h-cpu').style.width = avg * 100 + '%'; $('#v-cpu').textContent = pct(avg) + ' · ' + s.cpu.length + ' núcleos';
   $('#h-ram').style.width = mu * 100 + '%'; $('#v-ram').textContent = fmtB(s.mem.total - s.mem.free);
   $('#h-gpu').style.width = (g ? g.util : 0) + '%'; $('#v-gpu').textContent = g ? g.util + ' % · ' + (g.temp != null ? Math.round(g.temp) : '—') + '°' : 'N/D';
   $('#h-vram').style.width = (g ? g.memUsed / g.memTotal * 100 : 0) + '%'; $('#v-vram').textContent = g ? fmtB(g.memUsed) : '—';
-  $('#h-disk').style.width = (dk ? (1 - dk.free / dk.total) * 100 : 0) + '%'; $('#v-disk').textContent = dk ? fmtB(dk.free) + ' lib.' : '—';
+  $('#h-disk').style.width = (dk ? (1 - dk.free / dk.total) * 100 : 0) + '%'; $('#v-disk').textContent = dk ? fmtB(dk.free) + ' libres' : '—';
   const sp = $('#spark'), x = sp.getContext('2d'), W = sp.width, H = sp.height; x.clearRect(0, 0, W, H); x.beginPath();
   S.cpuHist.forEach((v, i) => { const px = W - (S.cpuHist.length - 1 - i) * (W / 89), py = H - 2 - v * (H - 4); i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.strokeStyle = 'rgba(23,104,181,.8)'; x.lineWidth = 1.5; x.stroke();
   if (p) { $('#L2').textContent = fmtN(p.count); $('#L2a').textContent = `E/S  ↓ ${fmtB(p.rd)}/s   ↑ ${fmtB(p.wr)}/s`; const t = p.top[0]; $('#L2b').textContent = t ? `top  ${t.name} · ${t.cpu.toFixed(0)} % · ${fmtB(t.ws)}` : ''; }
@@ -141,3 +141,7 @@ $('#sl').onclick = e => { const b = e.target.closest('button'); if (b) setSlice(
 const toggleEx = () => { S.exploded = !S.exploded; renderTop(); }; $('#b-ex').onclick = toggleEx;
 const toggleFollow = () => { if (FW.on) return stopFollow(); if (VIEW.cur === 'sistema' && G.sel && canFollow(G.sel)) return startFollow(G.sel); S.follow = !S.follow; renderTop(); }; $('#b-follow').onclick = toggleFollow;
 
+
+// The layers fold away so the list of cubes can take the whole panel
+{ const h = $('#lay-h'), L = $('#left'), set = v => { L.classList.toggle('nolayers', v); try { localStorage.setItem('prisma.nolayers', v ? '1' : ''); } catch {} }; let v = false; try { v = !!localStorage.getItem('prisma.nolayers'); } catch {} L.classList.toggle('nolayers', v);
+  if (h) { h.onclick = () => set(!L.classList.contains('nolayers')); h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); h.onclick(); } }; } }

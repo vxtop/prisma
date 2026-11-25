@@ -12,24 +12,42 @@
 // === Inside ===
 const IN = { key: null, mode: null, path: null, files: [], gen: 0, dims: new THREE.Vector3(), cur: new THREE.Vector3(), center: new THREE.Vector3(),
   hover: null, sel: null, pre: null, gone: [], groups: [], sort: 'size', q: '', today: false, open: new Set(), shellCol: new THREE.Color('#AEB9C5'), lp: null, timer: 0 };
-const MAXF = 600, IN_U = 1.2, IN_FOLDER = .4, IN_GAP = .8, GROUP_MAX = 110; // grid step, folder cube scale inside, gap between clusters, cubes shown per cluster before summarising
+const MAXF = 600, IN_U = 1.2, IN_ITEM = .86, IN_FOLDER = IN_ITEM / 2.92, IN_GAP = .8, GROUP_MAX = 110; // grid step, folder cube scale inside, gap between clusters, cubes shown per cluster before summarising
 const DIR_GROUPS = ['folder', 'code', 'data', 'docs', 'exe'], PROG_GROUPS = ['proc', 'net', 'link', 'mod', 'pfile'];
 const IN_NAMES = { folder: 'Carpetas', code: 'Código', data: 'Datos', docs: 'Documentos y medios', exe: 'Ejecutables', proc: 'Procesos', net: 'Conexiones', link: 'Carpetas que usa', mod: 'Módulos', pfile: 'Archivos abiertos' };
 const IN_HEX = { ...Object.fromEntries(Object.entries(GEM_HEX).map(([k, v]) => [k, v[1]])), proc: '#F0EBDD', net: '#5aa2ea', link: '#dfe6ee', mod: '#f0707e', pfile: '#f3d77e' };
 const IN_GEM = { proc: 'folder', net: 'code', link: 'folder', mod: 'exe', pfile: 'docs' }; // body colour of program items without their own
 const IN_SORTS = { size: 'tamaño', date: 'fecha', name: 'nombre' };
-const fileMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .72, roughness: .22, envMapIntensity: .8 }); // files: smaller and more polished than folders
-fileMat.onBeforeCompile = sh => withEdges(sh, .9);
+const fileMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: GM.m, roughness: GM.r, envMapIntensity: GM.e }); // the same matte graphene as every cube, and every item the same size
+fileMat.onBeforeCompile = sh => { withEdges(sh, EDGE_K); withGraphene(sh, '0.0'); };
+// The symbol of every item, on its faces: one instanced mesh reading an atlas (one draw call for hundreds of cubes).
+const IN_SYMK = ['code', 'data', 'text', 'exe', 'g-folder', 'app', 'web', 'archive', 'other', 'link', 'image', 'video', 'audio', 'pdf', 'font', 'model3d'];
+const IN_SYMC = { code: '#5aa2ea', web: '#5aa2ea', data: '#4fd39a', text: '#f3d77e', pdf: '#f3d77e', image: '#b79cf5', video: '#b79cf5', audio: '#b79cf5', model3d: '#b79cf5', exe: '#f0707e' };
+const IN_EXTS = [[/^(html?|xhtml)$/, 'web'], [/^pdf$/, 'pdf'], [/^(png|jpe?g|gif|webp|bmp|svg|ico|avif|tiff?|heic|psd)$/, 'image'], [/^(mp4|mkv|mov|avi|webm|m4v|wmv)$/, 'video'], [/^(mp3|wav|flac|ogg|m4a|aac|opus|wma)$/, 'audio'],
+  [/^(ttf|otf|woff2?|eot)$/, 'font'], [/^(glb|gltf|obj|stl|fbx|blend|3mf|ply)$/, 'model3d'], [/^(zip|rar|7z|tar|gz|bz2|xz|cab|iso)$/, 'archive']];
+function inSymKey(f) { if (f.summary) return 'other'; if (f.grp === 'proc') return 'app'; if (f.grp === 'net') return 'web'; if (f.grp === 'link') return 'g-folder'; if (f.grp === 'mod') return 'archive';
+  const e = String(f.ext || ((String(f.path || f.name || '').match(/\.([^.\\/]+)$/) || [])[1] || '')).toLowerCase(), m = IN_EXTS.find(x => x[0].test(e)); return m ? m[1] : f.gem === 'code' ? 'code' : f.gem === 'data' ? 'data' : f.gem === 'exe' ? 'exe' : 'text'; }
+let IN_SYM = null;
+function inSymIM() { if (IN_SYM) return IN_SYM; // built on first use: the symbol drawings live in 22-graphene
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1024; const g = cv.getContext('2d');
+  IN_SYMK.forEach((k, i) => { g.save(); g.translate((i % 4) * 256, (i >> 2) * 256); g.strokeStyle = '#fff'; g.globalAlpha = .13; g.lineWidth = 3; g.beginPath(); g.roundRect(16, 16, 224, 224, 30); g.stroke(); g.globalAlpha = 1;
+    g.strokeStyle = g.fillStyle = '#fff'; g.lineWidth = 11; g.lineCap = g.lineJoin = 'round'; g.shadowColor = '#fff'; g.shadowBlur = 12; (SYMDRAW[k] || SYMDRAW.other)(g); g.restore(); });
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  mat.onBeforeCompile = sh => { sh.vertexShader = 'attribute vec2 aCell;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n  vMapUv = (uv + aCell) * 0.25;'); };
+  const geo = SYM_GEO.clone(), cell = new THREE.InstancedBufferAttribute(new Float32Array(MAXF * 2), 2); cell.setUsage(THREE.DynamicDrawUsage); geo.setAttribute('aCell', cell);
+  const im = new THREE.InstancedMesh(geo, mat, MAXF); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAXF * 3), 3); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
+  im.frustumCulled = false; im.count = 0; im.renderOrder = 2; scene.add(im); IN_SYM = { im, cell, col: new Map(Object.entries(IN_SYMC).map(([k, v]) => [k, new THREE.Color(v)])), def: new THREE.Color('#dfe6ee') }; return IN_SYM; }
 const fileIM = new THREE.InstancedMesh(new RoundedBoxGeometry(1, 1, 1, 2, .09), fileMat, MAXF);
 fileIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage); fileIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAXF * 3), 3); fileIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 fileIM.frustumCulled = false; fileIM.count = 0; scene.add(fileIM);
 const FM = fileIM.instanceMatrix.array, FC = fileIM.instanceColor.array;
 // the case: faint glass walls and bright edges
 const inShell = new THREE.Group(); inShell.visible = false; scene.add(inShell);
-const inGlass = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .1, roughness: .08, transparent: true, opacity: .06, depthWrite: false, side: THREE.DoubleSide }));
-const inEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .7, depthWrite: false }));
+const inGlass = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xaeb9c5, metalness: .1, roughness: .6, transparent: true, opacity: .035, depthWrite: false, side: THREE.DoubleSide }));
+const inEdges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xaeb9c5, transparent: true, opacity: .32, depthWrite: false }));
 inShell.add(inGlass, inEdges);
-const inLabels = PROG_GROUPS.concat(DIR_GROUPS).map(() => { const sp = textSprite(640, 64); sp.material.sizeAttenuation = false; sp.material.depthTest = false; sp.renderOrder = 6; sp.center.set(.5, 0); sp.visible = false; scene.add(sp); return sp; });
+const inLabels = PROG_GROUPS.concat(DIR_GROUPS).map(() => { const sp = textSprite(640, 64); sp.userData.plate = true; sp.material.sizeAttenuation = false; sp.material.depthTest = false; sp.renderOrder = 6; sp.center.set(.5, 0); sp.visible = false; scene.add(sp); return sp; });
 const TRACE_MS = 5 * 60000, TRACES = new Map(); // folder -> [{ name, size, pos, s, t }]: where deleted files were
 const traceGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), tracePool = [];
 function traceMesh(i) { if (!tracePool[i]) { const m = new THREE.LineSegments(traceGeo, new THREE.LineBasicMaterial({ color: 0xf0707e, transparent: true, opacity: .8, depthWrite: false })); m.visible = false; scene.add(m); tracePool[i] = m; } return tracePool[i]; }
@@ -39,7 +57,7 @@ const inside = () => !!(S.enter || S.enterLP);
 
 /** Gem of a single file, from its extension (same families as the cubes). */
 function fileGem(ext) { const e = String(ext || '').toLowerCase(); return EXE_EXT.has(e) ? 'exe' : CODE.has(e) ? 'code' : DATA.has(e) ? 'data' : 'docs'; }
-const edgeOf = (v, lo, hi) => (.3 + .5 * Math.min(1, Math.max(0, Math.log10(1 + (v || 0)) - lo) / (hi - lo))) * IN_U * .82;
+const edgeOf = () => IN_ITEM; // every item the same edge: its weight is read on its card, not in its body
 const fileSize = size => edgeOf(size, 0, 7);
 
 /** Lists a folder: used before entering (an empty folder is not entered) and to fill the case. */
@@ -74,9 +92,9 @@ async function inLoadProg(o) {
     for (const p of d.procs || []) want.push({ id: 'p' + p.pid, grp: 'proc', name: p.name, pid: p.pid, size: p.ws, cpu: p.cpu, io: p.io, cmd: p.cmd, ts: edgeOf(p.ws, 6, 10), col });
     const hosts = new Map(); for (const c of d.net || []) { const h = c.host || c.rip || (c.state === 'escucha' ? 'escucha :' + c.lport : '?'); const x = hosts.get(h) || hosts.set(h, { n: 0, ports: new Set(), pids: new Set() }).get(h); x.n++; x.ports.add(c.rport || c.lport); x.pids.add(c.pid); }
     for (const [h, x] of hosts) want.push({ id: 'n' + h, grp: 'net', name: h, size: x.n, n: x.n, ports: [...x.ports].filter(Boolean).slice(0, 6), pids: [...x.pids], gem: 'code', ts: edgeOf(x.n, 0, 1.6) });
-    for (const l of o.p.links || []) want.push({ id: 'l' + K(l), grp: 'link', name: base(l), path: l, gem: 'folder', size: 0, ts: IN_U * .62 });
-    for (const m of (d.modules || []).slice(0, 160)) want.push({ id: 'm' + String(m).toLowerCase(), grp: 'mod', name: m, gem: 'exe', size: 0, ts: IN_U * .32 });
-    for (const f of (d.files || []).slice(0, 200)) want.push({ id: 'f' + K(f), grp: 'pfile', name: base(f), path: f, gem: fileGem(extOf(f)), size: 0, ts: IN_U * .36 });
+    for (const l of o.p.links || []) want.push({ id: 'l' + K(l), grp: 'link', name: base(l), path: l, gem: 'folder', size: 0, ts: IN_ITEM });
+    for (const m of (d.modules || []).slice(0, 160)) want.push({ id: 'm' + String(m).toLowerCase(), grp: 'mod', name: m, gem: 'exe', size: 0, ts: IN_ITEM });
+    for (const f of (d.files || []).slice(0, 200)) want.push({ id: 'f' + K(f), grp: 'pfile', name: base(f), path: f, gem: fileGem(extOf(f)), size: 0, ts: IN_ITEM });
     inMerge(want); IN.timer = setTimeout(pull, 3000);
   };
   await pull();
@@ -114,7 +132,7 @@ function inLayout(all) {
     let sm = IN.files.find(f => f.summary && f.grp === G.g);
     if (G.g !== 'folder' && G.items.length > GROUP_MAX && !IN.open.has(G.g)) { const rest = G.items.slice(GROUP_MAX - 1); rest.forEach(f => { f.hidden = true; });
       if (!sm) { sm = { id: 'sum' + G.g, summary: true, grp: G.g, gem: G.items[0].gem, p: ctr.clone(), t: ctr.clone(), s: 0, fx: null }; IN.files.push(sm); }
-      Object.assign(sm, { name: `+${fmtN(rest.length)} más`, n: rest.length, size: rest.reduce((s, f) => s + (f.size || 0), 0), ts: IN_U * .9, dead: 0 }); G.items = G.items.slice(0, GROUP_MAX - 1).concat(sm); G.total = GROUP_MAX - 1 + rest.length; }
+      Object.assign(sm, { name: `+${fmtN(rest.length)} más`, n: rest.length, size: rest.reduce((s, f) => s + (f.size || 0), 0), ts: IN_ITEM, dead: 0 }); G.items = G.items.slice(0, GROUP_MAX - 1).concat(sm); G.total = GROUP_MAX - 1 + rest.length; }
     else { if (sm) sm.hidden = true; G.total = G.items.length; }
     const n = G.items.length; G.side = Math.max(1, Math.ceil(Math.cbrt(n))); G.layers = Math.ceil(n / (G.side * G.side)); G.w = G.side * IN_U; }
   for (const f of IN.files) if (f.summary && !groups.some(G => G.items.includes(f))) f.hidden = true;
@@ -164,14 +182,14 @@ function inStep(dt, kf) {
   // case: grows out of the cube's own body (or the program) and shrinks back into it
   if (on) IN.cur.lerp(IN.dims, kf * .8); else IN.cur.multiplyScalar(1 - kf);
   inShell.visible = show && IN.cur.x > .05;
-  if (inShell.visible) { inShell.position.copy(ctr); inShell.scale.copy(IN.cur); inGlass.material.color.copy(IN.shellCol); inEdges.material.color.copy(IN.shellCol).lerp(IN_TOUCH, .35); }
+  if (inShell.visible) { inShell.position.copy(ctr); inShell.scale.copy(IN.cur); }
   // cluster labels
   inLabels.forEach(sp => { sp.visible = false; });
   if (on && show && IN.cur.x > IN.dims.x * .8) IN.groups.forEach((G, i) => { if (G.g === 'folder') return; /* folders carry their own names */ const sp = inLabels[i], hits = IN.q ? G.items.filter(f => !f.summary && inMatch(f)).length : 0, key = G.g + G.total + IN.q + hits;
     if (sp.userData.key !== key) { sp.userData.key = key; drawText(sp, [[`◆ ${IN_NAMES[G.g]} · ${fmtN(G.total)}${IN.q ? ' · ' + fmtN(hits) + ' coinciden' : ''}`, 30, IN_HEX[G.g], 34]]); }
     sp.position.copy(G.top); sp.scale.set(pxScale(22) * 10, pxScale(22), 1); sp.visible = true; });
   // items: rise from the centre into their place; the dead drop and fade; when leaving, everything sinks back
-  const now = performance.now(), tsec = clock.elapsedTime; let n = 0;
+  const now = performance.now(), tsec = clock.elapsedTime, SY = show ? inSymIM() : null, SM = SY && SY.im.instanceMatrix.array, SC = SY && SY.im.instanceColor.array, SA = SY && SY.cell.array; let n = 0;
   const put = (f, leaving) => {
     if (leaving || f.hidden) { if (leaving && on) f.t.copy(ctr); f.s += (0 - f.s) * kf; }
     else if (f.dead) { const a = (now - f.dead) / 1000; f.t.y -= dt * (1 + a * 3); if (a > .5) f.s += (0 - f.s) * kf * .7; }
@@ -179,12 +197,14 @@ function inStep(dt, kf) {
     f.p.lerp(f.t, kf * .9);
     if (n >= MAXF || f.s < .004) return;
     const dim = !leaving && ((IN.today && IN.mode === 'dir' && !isToday(f.mtime)) || (IN.q && !f.summary && !inMatch(f))), hit = !leaving && IN.q && !f.summary && inMatch(f);
-    const col = f.col || GEM[f.gem || IN_GEM[f.grp] || 'folder'][0], sel = f === IN.sel, hov = f === IN.hover, busy = f.cpu ? Math.min(1, f.cpu / 25) : 0;
-    const b = (sel ? .9 : hov || hit ? .62 : .36 + busy * .4 * (1 + .2 * Math.sin(tsec * (2 + busy * 5)))) * (dim ? .22 : 1), s = f.s * (hov ? 1.08 : 1) * (dim ? .55 : 1);
-    let r = col.r * b + (sel ? .35 : .02), g = col.g * b + (sel ? .35 : .02), bl = col.b * b + (sel ? .35 : .025);
-    if (f.fx) { const a = (now - f.fx.t) / 1000, life = f.dead ? 3 : 2.2, w = Math.max(0, 1 - a / life) * (f.fx.soft ? .5 : 1.6) * (f.dead ? 1 : (1 + .35 * Math.sin(a * 14)));
+    const col = GRAPHENE, sel = f === IN.sel, hov = f === IN.hover, busy = f.cpu ? Math.min(1, f.cpu / 25) : 0;
+    const b = (sel ? 2.2 : hov || hit ? 1.6 : 1) * (dim ? .5 : 1), s = f.s * (hov ? 1.05 : 1), lit = (sel ? 1.7 : hov || hit ? 1.35 : .9 + busy * .6 * (1 + .2 * Math.sin(tsec * (2 + busy * 5)))) * (dim ? .16 : 1); // the body stays graphene; the symbol carries colour, activity and focus
+    let r = col.r * b, g = col.g * b, bl = col.b * b;
+    if (f.fx) { const a = (now - f.fx.t) / 1000, life = f.dead ? 3 : 2.2, w = Math.max(0, 1 - a / life) * (f.fx.soft ? .3 : .8) * (f.dead ? 1 : (1 + .35 * Math.sin(a * 14)));
       if (w <= 0 && !f.dead) f.fx = null; else { inTmp.copy(f.fx.col); r += inTmp.r * w; g += inTmp.g * w; bl += inTmp.b * w; } }
-    setM(FM, n, f.p.x, f.p.y, f.p.z, s, s, s); const k = n * 3; FC[k] = r; FC[k+1] = g; FC[k+2] = bl; n++; };
+    setM(FM, n, f.p.x, f.p.y, f.p.z, s, s, s); const k = n * 3; FC[k] = r; FC[k+1] = g; FC[k+2] = bl;
+    if (SY) { const key = f.symK || (f.symK = inSymKey(f)), ci = Math.max(0, IN_SYMK.indexOf(key)), sc = SY.col.get(key) || SY.def; setM(SM, n, f.p.x, f.p.y, f.p.z, s, s, s); SC[k] = sc.r * lit; SC[k+1] = sc.g * lit; SC[k+2] = sc.b * lit; SA[n * 2] = ci % 4; SA[n * 2 + 1] = 3 - (ci >> 2); }
+    n++; };
   for (const f of IN.files) put(f, false);
   const gone = IN.files.filter(f => f.dead && now - f.dead > 3000); if (gone.length) { if (gone.includes(IN.sel)) { IN.sel = null; if (S.mode === 'item') { S.mode = 'cube'; renderPanel(); } } IN.files = IN.files.filter(f => !gone.includes(f)); layout(); }
   IN.gone = IN.gone.filter(f => f.s > .004); for (const f of IN.gone) put(f, true);
@@ -193,6 +213,7 @@ function inStep(dt, kf) {
   tr.forEach((x, j) => { const m = traceMesh(j); m.visible = true; m.position.copy(C.home).add(x.pos); m.scale.setScalar(x.s); m.material.opacity = .85 * (1 - (Date.now() - x.t) / TRACE_MS); });
   for (let j = tr.length; j < tracePool.length; j++) tracePool[j].visible = false;
   fileIM.count = n; if (n) { fileIM.instanceMatrix.needsUpdate = true; fileIM.instanceColor.needsUpdate = true; }
+  if (IN_SYM) { IN_SYM.im.visible = show; IN_SYM.im.count = SY ? n : 0; if (SY && n) { IN_SYM.im.instanceMatrix.needsUpdate = true; IN_SYM.im.instanceColor.needsUpdate = true; IN_SYM.cell.needsUpdate = true; } }
 }
 
 /** Points that frame the case, for fitAll: all eight corners (two opposite ones can line up with the view). */
@@ -201,11 +222,11 @@ function inFrame() { if (!inside()) return null; const h = v1.copy(IN.dims).mult
 // ---------- what an item says, selects and opens ----------
 function inTip(f) {
   const head = `<b>${esc(f.name)}</b><br>`;
-  if (f.summary) return head + `<span style="color:var(--dim)">${fmtN(f.n)} más · ${fmtB(f.size)} en total · doble clic para verlos todos</span>`;
+  if (f.summary) return head + `<span style="color:var(--dim)">${fmtN(f.n)} más · ${fmtB(f.size)} en total · Enter para verlos todos</span>`;
   if (f.grp === 'proc') return head + `<span style="color:var(--dim)">PID ${f.pid} · ${fmtB(f.size)} · ${(f.cpu || 0).toFixed(1)} % CPU${f.io ? ' · ' + fmtB(f.io) + '/s' : ''}</span>`;
   if (f.grp === 'net') return head + `<span style="color:var(--dim)">${f.n} conexión${f.n > 1 ? 'es' : ''}${f.ports.length ? ' · puertos ' + f.ports.join(', ') : ''}</span>`;
   if (f.grp === 'mod') return head + '<span style="color:var(--dim)">módulo cargado</span>';
-  if (f.grp === 'link') return head + `<span style="color:var(--dim)">${esc(f.path)} · doble clic para entrar</span>`;
+  if (f.grp === 'link') return head + `<span style="color:var(--dim)">${esc(f.path)} · Enter para entrar</span>`;
   return head + `<span style="color:${GEM_HEX[f.gem][1]}">◆ ${GEM_TXT[f.gem]}</span> <span style="color:var(--dim)">${f.size != null ? '· ' + fmtB(f.size) : ''}${f.mtime ? ' · hace ' + ago(f.mtime) : ''}</span>`;
 }
 
@@ -244,11 +265,11 @@ async function renderItemPanel() {
 }
 
 // ---------- sort, search, today ----------
-function inCycleSort() { if (!inside()) return toast('Entra en una carpeta o un programa (doble clic) para ordenar lo que tiene dentro'); const k = Object.keys(IN_SORTS); IN.sort = k[(k.indexOf(IN.sort) + 1) % k.length]; layout(); toast('Ordenado por ' + IN_SORTS[IN.sort]); }
-function toggleToday() { if (!S.enter) { toast('Entra en una carpeta (doble clic) para ver sus novedades de hoy'); return; } IN.today = !IN.today;
+function inCycleSort() { if (!inside()) return toast('Entra en una carpeta o un programa (Enter) para ordenar lo que tiene dentro'); const k = Object.keys(IN_SORTS); IN.sort = k[(k.indexOf(IN.sort) + 1) % k.length]; layout(); toast('Ordenado por ' + IN_SORTS[IN.sort]); }
+function toggleToday() { if (!S.enter) { toast('Entra en una carpeta (Enter) para ver sus novedades de hoy'); return; } IN.today = !IN.today;
   const n = IN.files.filter(f => !f.summary && isToday(f.mtime)).length, d = (TRACES.get(K(IN.path)) || []).length; toast(IN.today ? `Novedades de hoy: ${n} creados o cambiados${d ? ' · ' + d + ' borrados' : ''}` : 'Se ve todo'); }
 function inSearchOpen() {
-  if (!inside()) return toast('Entra en una carpeta o un programa (doble clic) para buscar dentro');
+  if (!inside()) return toast('Entra en una carpeta o un programa (Enter) para buscar dentro');
   let el = $('#insearch'); if (!el) { el = document.createElement('input'); el.id = 'insearch'; el.placeholder = 'Buscar dentro…  (Intro selecciona · Esc cierra)'; el.spellcheck = false; el.autocomplete = 'off'; document.body.appendChild(el);
     el.addEventListener('input', () => { IN.q = el.value.trim().toLowerCase(); IN.open.clear(); if (IN.q) for (const f of IN.files) if (f.hidden && !f.summary && inMatch(f)) IN.open.add(f.grp); layout(); }); // a match hidden in a summary opens its cluster
     el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') { inSearchClose(); layout(); } else if (e.key === 'Enter') { const f = IN.files.find(x => !x.dead && !x.hidden && !x.summary && inMatch(x)); if (f) inSelect(f); } }); }

@@ -1155,6 +1155,12 @@ const server = http.createServer(async (req, res) => {
       if (u.pathname === '/api/index') { const p = await checkDir(b.path); return json(res, 200, ixPublic(startIndex(p, by))); }
       if (u.pathname === '/api/layout') { if (!['cluster', 'stack', 'grid', 'orbit'].includes(b.mode)) throw new Error('mode: cluster | stack | grid | orbit'); ws.layout = b.mode; log(by, 'organiza', b.mode); send(state()); return json(res, 200, state()); }
       if (u.pathname === '/api/focus') { const p = await checkDir(b.path); if (!ws.cubes.has(key(p))) throw new Error('Ese cubo no está abierto'); ws.focus = p; ws.focusRev++; log(by, 'enfoca', p); send(state()); return json(res, 200, state()); }
+      if (u.pathname === '/api/show') { // brings something in front of the user: a folder as a framed cube, a file as a file cube next to its folder (view: opened in the viewer). Read-only like the rest
+        const p = safePath(b.path), st = await fsp.stat(p).catch(() => null); if (!st) throw new Error('No existe: ' + p);
+        const dir = st.isDirectory(), home = dir ? p : path.dirname(p);
+        if (dir) await openCube(p, { expand: !!b.expand, by }); else if (![...ws.cubes.values()].some(c => inside(p, c.path))) await openCube(home, { by, quiet: true }); // a file needs a cube to hang from: its folder, unless one that contains it is already open
+        if (!dir && !b.auto) log(by, b.view ? 'abre en el visor' : 'muestra', p);
+        send({ k: 'show', path: p, dir, view: !dir && !!b.view }); return json(res, 200, { shown: dir ? 'cubo' : b.view ? 'visor' : 'archivo', path: p, cube: home }); }
       res.writeHead(404); return res.end();
     }
     if (u.pathname === '/api/version') return json(res, 200, { running: SRC, disk: srcHash() });

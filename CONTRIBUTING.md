@@ -11,7 +11,7 @@ Gracias por tu interés. Prisma es pequeño a propósito: Node.js sin más, sin 
 ## Empezar
 
 ```bash
-git clone https://github.com/OWNER/prisma.git
+git clone https://github.com/vxtop/prisma.git
 cd prisma
 node server.js --port 4899      # una segunda instancia junto a la que usas a diario
 ```

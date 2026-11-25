@@ -97,7 +97,9 @@ function renderLoad() {
 const LP = new Map(), LPMAX = 48, LPB = 3.2; // LPB: float height of program cubes (they rest on nothing)
 const lpGeo = new THREE.BufferGeometry(); lpGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(96 * 6), 3)); lpGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(96 * 6), 3));
 const lpLines = new THREE.LineSegments(lpGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: .8, depthWrite: false, toneMapped: false })); lpLines.frustumCulled = false; scene.add(lpLines);
-// each program is one solid cube: colour = type, size = memory, a glass case with one small cube per process, which brighten and breathe with the CPU
+// each program is one graphene cube, the same size as every other cube; what it is shows in the symbol on its faces (and its real icon on the lid), and the CPU lights that symbol
+const LP_E = 2.92; // edge of a program with several processes (a cube of 27); a single process is one cube, like a file
+const LP_SYM = { ia: ['ia', '#D97757'], term: ['exe', '#AEB9C5'], web: ['web', '#5aa2ea'], run: ['code', '#4fd39a'], game: ['app', '#b79cf5'], sys: ['sistema', '#AEB9C5'], app: ['app', '#5aa2ea'] };
 const cellsOf = (max) => { const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .55, roughness: .42, envMapIntensity: .5 }); mat.onBeforeCompile = sh => withEdges(sh, 1.8); const im = new THREE.InstancedMesh(cellGeo, mat, max); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3); im.frustumCulled = false; im.count = 0; scene.add(im); return im; };
 const lpFgRing = new THREE.Mesh(new THREE.RingGeometry(.94, 1, 64), new THREE.MeshBasicMaterial({ color: 0xd97757, transparent: true, opacity: .75, depthWrite: false, toneMapped: false })); lpFgRing.visible = false; scene.add(lpFgRing); // ring for the foreground program
 // live screen: the foreground window image, floating above its cube
@@ -110,53 +112,55 @@ setInterval(pullFgShot, 1000);
 const lpCurRing = new THREE.Mesh(new THREE.RingGeometry(.9, .96, 64), new THREE.MeshBasicMaterial({ color: 0x1768b5, transparent: true, opacity: .8, depthWrite: false, toneMapped: false })); lpCurRing.visible = false; scene.add(lpCurRing); // ring for the program under the cursor
 const lpGlassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: .2, roughness: .1, transparent: true, opacity: .2, depthWrite: false }); lpGlassMat.onBeforeCompile = sh => withEdges(sh, 3);
 const lpGlass = new THREE.InstancedMesh(new RoundedBoxGeometry(1, 1, 1, 2, .05), lpGlassMat, LPMAX); lpGlass.instanceMatrix.setUsage(THREE.DynamicDrawUsage); lpGlass.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(LPMAX * 3), 3); lpGlass.frustumCulled = false; lpGlass.count = 0; lpGlass.renderOrder = 3; scene.add(lpGlass);
-const lpCells = cellsOf(LPMAX * 27), UPORDER = [...Array(27).keys()].sort((a, b) => BASE[a][1] - BASE[b][1] || a - b); // programs: two instances each (body and CPU level); UPORDER: bottom-up cells for the System view
+const lpCells = cellsOf(LPMAX * 27); { const m = lpCells.material; m.metalness = GM.m; m.roughness = GM.r; m.envMapIntensity = GM.e; m.onBeforeCompile = sh => { withEdges(sh, EDGE_K); withGraphene(sh, '0.0'); }; }
+const UPORDER = [...Array(27).keys()].sort((a, b) => BASE[a][1] - BASE[b][1] || a - b); // programs: two instances each (body and CPU level); UPORDER: bottom-up cells for the System view
 const scrGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-const lpTmp = new THREE.Color();
+const lpTmp = new THREE.Color(); const lpC = new THREE.Vector3(), lpD = new THREE.Vector3();
 function syncLiveProcs(list) {
   { const g = new Map(); for (const p of list || []) { const k = p.win || p.name; const e = g.get(k); if (!e) g.set(k, { ...p, n: 1, pids: [p.pid], links: [...(p.links || [])] }); else { e.n++; e.pids.push(p.pid); e.cpu += p.cpu; e.ws += p.ws; for (const l of p.links || []) if (!e.links.includes(l)) e.links.push(l); } } list = [...g.values()]; }
   const seen = new Set();
   (list || []).forEach(p => { const id = p.win || p.name; seen.add(id); let o = LP.get(id);
     if (!o) { const kind = p.claude ? 'claude' : p.win ? 'app' : /^node(\.exe)?$/i.test(p.name) ? 'node' : 'proc';
       o = { id, kind, off: new THREE.Vector3(), icon: new THREE.Mesh(scrGeo, new THREE.MeshBasicMaterial({ map: screenFor({ name: p.name, exe: p.exe, kind }), transparent: true, toneMapped: false, depthWrite: false })), pos: new THREE.Vector3(0, LPB, 0), base: new THREE.Vector3(0, LPB, 0), h: .02 };
+      { const [sk, sc] = LP_SYM[procCat(p.name, kind)[0]] || LP_SYM.app; o.sym = symMesh(); o.sym.material.map = symTex(sk, sc); scene.add(o.sym); }
       scene.add(o.icon); LP.set(id, o); }
     o.p = p; o.dead = false; if (o.slot == null) { const used = new Set([...LP.values()].map(x => x.slot)); let k = 0; while (used.has(k)) k++; o.slot = k; } });
   for (const [id, o] of LP) if (!seen.has(id)) { o.dead = true; if (S.lpSel === o) { S.lpSel = null; if (S.mode === 'lp') { S.mode = 'cube'; renderPanel(); } } }
 }
 function stepLiveProcs(dt, t) {
   const on = S.space === 'vivo' && VIEW.cur === 'espacio' && !VW.o && !S.enter && !S.enterLP; lpLines.visible = lpCells.visible = lpGlass.visible = on; if (!on) { lpFgRing.visible = false; lpCurRing.visible = false; fgScreen.visible = fgFrame.visible = false; }
-  for (const [id, o] of LP) if (o.dead && o.h < .06) { scene.remove(o.icon); o.icon.material.dispose(); LP.delete(id); }
-  for (const o of LP.values()) o.icon.visible = on; if (!on || !LP.size) { lpCells.count = 0; lpGlass.count = 0; return; }
+  for (const [id, o] of LP) if (o.dead && o.h < .06) { scene.remove(o.icon); o.icon.material.dispose(); scene.remove(o.sym); o.sym.material.dispose(); LP.delete(id); }
+  for (const o of LP.values()) o.icon.visible = o.sym.visible = on; if (!on || !LP.size) { lpCells.count = 0; lpGlass.count = 0; return; }
   const river = S.layout === 'cluster' || S.layout === 'orbit', hub = v3.set(0, 0, 0); if (!river && S.vorder && S.vorder.length) { const b = new THREE.Box3(); S.vorder.forEach(c => b.expandByPoint(c.home)); b.getCenter(hub); hub.z = b.max.z + 9; hub.y = 0; }
-  const NS = Math.max(12, ...[...LP.values()].map(o => o.slot + 1)), R = Math.max(4.6, NS * 2.7 / (2 * Math.PI)), k = 1 - Math.pow(.02, dt), P = lpGeo.attributes.position.array, C = lpGeo.attributes.color.array, A = lpCells.instanceMatrix.array, IC = lpCells.instanceColor.array, GA = lpGlass.instanceMatrix.array, GC = lpGlass.instanceColor.array; let m = 0, i = 0, pc = 0;
+  const NS = Math.max(12, ...[...LP.values()].map(o => o.slot + 1)), R = Math.max(7.4, NS * (LP_E + 1.5) / (2 * Math.PI)), k = 1 - Math.pow(.02, dt), P = lpGeo.attributes.position.array, C = lpGeo.attributes.color.array, A = lpCells.instanceMatrix.array, IC = lpCells.instanceColor.array, GA = lpGlass.instanceMatrix.array, GC = lpGlass.instanceColor.array; let m = 0, i = 0, pc = 0;
+  const lookAt = S.sel ? S.sel.pos : OB.sel ? OB.sel.pos : null, lpDL = lookAt ? Math.max(1e-6, lpD.subVectors(lookAt, camera.position).lengthSq()) : 1;
   for (const o of LP.values()) { if (i >= LPMAX) break; const a = o.slot / NS * Math.PI * 2, p = o.p;
-    o.base.lerp(v2.set(hub.x + Math.cos(a) * R, LPB, hub.z + Math.sin(a) * R), k); const hw = o.dead ? 0 : .9 + 1.5 * Math.sqrt(Math.min(1, p.ws / 3e9)); o.h += (hw - o.h) * k; // cube edge: memory
+    o.base.lerp(v2.set(hub.x + Math.cos(a) * R, LPB, hub.z + Math.sin(a) * R), k); const np = Math.max(1, (p.pids || []).length || p.n || 1), multi = np > 1; let hw = o.dead ? 0 : multi ? LP_E : OBJ_E; if (hw && lookAt && o !== S.lpSel) { /* a program standing between you and what you selected steps aside */ lpC.set(o.base.x, LPB + LP_E / 2, o.base.z).sub(camera.position); const tt = Math.max(0, Math.min(1, lpC.dot(lpD) / lpDL)); if (tt < .97 && lpC.addScaledVector(lpD, -tt).length() < LP_E * 1.05) hw = LP_E * .22; } o.h += (hw - o.h) * k; // every program the same edge; memory and CPU are read on its card
     const isFg = !!(S.fg && (o.p.pids || [o.p.pid]).includes(S.fg.pid)); o.fg = isFg;
-    const sel = o === S.lpSel, hov = o === S.lpHover, E = o.h * (hov || sel ? 1.06 : 1) * (isFg ? 1.35 : 1), sp = E / 3, cy = LPB + E / 2 + .02, w = E; o.pos.set(o.base.x, LPB + E, o.base.z);
+    const sel = o === S.lpSel, hov = o === S.lpHover, E = o.h * (hov || sel ? 1.04 : 1), sp = E / 3, cy = LPB + E / 2 + .02, w = E; o.pos.set(o.base.x, LPB + E, o.base.z);
     const rel = !S.sel || (p.links || []).some(q => K(q) === S.sel.key), heat = Math.min(1, p.cpu / 60);
     const kc = lpTmp.set(procCat(p.name, o.kind)[1]), fl = o.flash ? Math.max(0, 1 - (performance.now() - o.flash) / 1200) : 0, dim = (sel ? 1.6 : hov ? 1.3 : isFg ? 1.45 : 1) * (rel || isFg ? 1 : .45), lit = 0;
-    // a glass case (edge: memory) holding one small cube per process; the CPU makes them brighten and breathe
-    setM(GA, i, o.base.x, cy, o.base.z, E * .97, E * .97, E * .97); GC[i * 3] = kc.r * .5 * dim; GC[i * 3 + 1] = kc.g * .5 * dim; GC[i * 3 + 2] = kc.b * .5 * dim;
-    const np = Math.min(27, Math.max(1, (p.pids || []).length || p.n || 1)), side = Math.ceil(Math.cbrt(np)), ly = Math.ceil(np / (side * side)), cs = E * .8 / side, ps = cs * .74, oo = (side - 1) / 2;
-    const f0 = Math.min(1, .38 + fl + heat * .55 * (1 + .15 * Math.sin(t * (2 + heat * 5))));
-    for (let q = 0; q < np && pc < LPMAX * 27; q++, pc++) { const gx = q % side, gz = (q / side | 0) % side, gy = q / (side * side) | 0;
-      setM(A, pc, o.base.x + (gx - oo) * cs, cy + (gy - (ly - 1) / 2) * cs, o.base.z + (gz - oo) * cs, ps, ps, ps);
-      IC[pc * 3] = (GRAPHITE.r * (1 - f0 * .6) + kc.r * f0 * .6) * dim; IC[pc * 3 + 1] = (GRAPHITE.g * (1 - f0 * .6) + kc.g * f0 * .6) * dim; IC[pc * 3 + 2] = (GRAPHITE.b * (1 - f0 * .6) + kc.b * f0 * .6) * dim; }
+    // one graphene body; the symbol on its faces carries the colour and lights up with the CPU
+    o.ex = (o.ex || 0) + ((hov && multi ? .6 : 0) - (o.ex || 0)) * Math.min(1, dt * 9); // the pointer spreads its 27 cells apart
+    { const b = sel ? 1.9 : hov ? 1.45 : 1, sp3 = E / 3 * (1 + 1.1 * o.ex), cs = E / 3 * .93, n27 = multi ? 27 : 1;
+      for (let q = 0; q < n27 && pc < LPMAX * 27; q++, pc++) { if (multi) { const B = BASE[q]; setM(A, pc, o.base.x + B[0] * sp3, cy + B[1] * sp3, o.base.z + B[2] * sp3, cs, cs, cs); } else setM(A, pc, o.base.x, cy, o.base.z, E, E, E);
+        IC[pc * 3] = GRAPHENE.r * b; IC[pc * 3 + 1] = GRAPHENE.g * b; IC[pc * 3 + 2] = GRAPHENE.b * b; } }
+    o.sym.position.set(o.base.x, cy, o.base.z); o.sym.geometry = multi ? SYM_S : SYM_GEO; o.sym.scale.setScalar(E * (1 + .733 * o.ex)); o.sym.material.color.setScalar((rel || isFg ? 1 : .35) * (.75 + fl + heat * .7 * (1 + .2 * Math.sin(t * (2 + heat * 5))) + (sel ? .5 : hov ? .25 : 0))); o.sym.material.opacity = Math.min(1, o.h / OBJ_E * 1.5) * (1 - .55 * o.ex);
     i++;
     o.icon.position.set(o.base.x, LPB + E + .03, o.base.z); o.icon.scale.setScalar(w * .62); o.icon.material.opacity = (rel ? 1 : .4) * Math.min(1, o.h * 2);
     if (sel || hov || isFg || (S.fg && S.fg.cur && (p.pids || [p.pid]).includes(S.fg.cur.pid))) for (const lp of p.links || []) { const c = S.cubes.get(K(lp)); if (!c || c.vis === false || m >= 96) continue; /* line = this program uses this folder */ const col = o.kind === 'claude' ? [.7, .45, .14] : [.12, .4, .38], f = sel || hov ? 2 : 1;
       P.set([o.pos.x, o.pos.y, o.pos.z, c.pos.x, c.pos.y, c.pos.z], m * 6); C.set([...col.map(x => x * f), ...col.map(x => x * .35 * f)], m * 6); m++;
     } }
-  lpCells.count = pc; lpCells.instanceMatrix.needsUpdate = true; lpCells.instanceColor.needsUpdate = true; lpGlass.count = i; lpGlass.instanceMatrix.needsUpdate = true; lpGlass.instanceColor.needsUpdate = true;
+  lpCells.count = pc; lpCells.instanceMatrix.needsUpdate = true; lpCells.instanceColor.needsUpdate = true; lpGlass.count = 0; lpGlass.instanceMatrix.needsUpdate = true; lpGlass.instanceColor.needsUpdate = true;
   { const f = [...LP.values()].find(o => o.fg && !o.dead), showS = !!(f && fgScreen.material.map && S.fg && !/^Prisma$/.test(S.fg.title || '')); fgScreen.visible = fgFrame.visible = showS;
-    if (showS) { const W = Math.min(40, Math.max(4, camera.position.distanceTo(f.base) * .24)), Hs = W * fgAspect, y = LPB + f.h * 1.35 + .8; /* readable at any distance: ~1/4 of the view width */ fgScreen.position.set(f.base.x, y, f.base.z); fgScreen.scale.set(W, Hs, 1); const away = (S.sel || S.lpSel) && S.lpSel !== f; fgScreen.material.opacity = away ? .22 : .96; fgFrame.material.opacity = away ? .2 : .8; lpFgRing.material.opacity = away ? .25 : .9; fgFrame.position.set(f.base.x, y + Hs / 2, f.base.z); fgFrame.quaternion.copy(camera.quaternion); fgFrame.scale.set(W * 1.02, Hs * 1.02, 1); }
-    { const cu = S.fg && S.fg.cur, oc = cu && cu.pid ? [...LP.values()].find(o => !o.dead && (o.p.pids || [o.p.pid]).includes(cu.pid)) : null; lpCurRing.visible = !!oc && on; if (oc) { const E2 = oc.h * (oc.fg ? 1.35 : 1); lpCurRing.position.set(oc.base.x, LPB + E2 / 2, oc.base.z); lpCurRing.quaternion.copy(camera.quaternion); lpCurRing.scale.setScalar(E2 * .95 + .25); lpCurRing.material.opacity = (S.sel || S.lpSel) && S.lpSel !== oc ? .2 : .8; lpFgRing.material.opacity = (S.sel || S.lpSel) && !(S.lpSel && S.lpSel.fg) ? .25 : .9; } }
-    lpFgRing.visible = !!f; if (f) { const E1 = f.h * 1.35; lpFgRing.position.set(f.base.x, LPB + E1 / 2, f.base.z); lpFgRing.quaternion.copy(camera.quaternion); lpFgRing.scale.setScalar(E1 * 1.05 + .35); } }
+    if (showS) { const W = Math.min(40, Math.max(4, camera.position.distanceTo(f.base) * .24)), Hs = W * fgAspect, y = LPB + f.h + .8; /* readable at any distance: ~1/4 of the view width */ fgScreen.position.set(f.base.x, y, f.base.z); fgScreen.scale.set(W, Hs, 1); const away = (S.sel || S.lpSel) && S.lpSel !== f; fgScreen.material.opacity = away ? .22 : .96; fgFrame.material.opacity = away ? .2 : .8; lpFgRing.material.opacity = away ? .25 : .9; fgFrame.position.set(f.base.x, y + Hs / 2, f.base.z); fgFrame.quaternion.copy(camera.quaternion); fgFrame.scale.set(W * 1.02, Hs * 1.02, 1); }
+    { const cu = S.fg && S.fg.cur, oc = cu && cu.pid ? [...LP.values()].find(o => !o.dead && (o.p.pids || [o.p.pid]).includes(cu.pid)) : null; lpCurRing.visible = !!oc && on; if (oc) { const E2 = oc.h; lpCurRing.position.set(oc.base.x, LPB + E2 / 2, oc.base.z); lpCurRing.quaternion.copy(camera.quaternion); lpCurRing.scale.setScalar(E2 * .95 + .25); lpCurRing.material.opacity = (S.sel || S.lpSel) && S.lpSel !== oc ? .2 : .8; lpFgRing.material.opacity = (S.sel || S.lpSel) && !(S.lpSel && S.lpSel.fg) ? .25 : .9; } }
+    lpFgRing.visible = !!f; if (f) { const E1 = f.h; lpFgRing.position.set(f.base.x, LPB + E1 / 2, f.base.z); lpFgRing.quaternion.copy(camera.quaternion); lpFgRing.scale.setScalar(E1 * 1.05 + .35); } }
   lpGeo.setDrawRange(0, m * 2); lpGeo.attributes.position.needsUpdate = true; lpGeo.attributes.color.needsUpdate = true;
 }
 function pickLP(x, y) { if (S.space !== 'vivo' || VIEW.cur !== 'espacio' || S.enter || S.enterLP || !lpCells.visible) return null; let best = null, bs = Infinity; const ph = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
   // the program cube whose screen center is nearest the click, within its silhouette (foreground cube is larger)
-  for (const o of LP.values()) { if (o.dead) continue; const E = o.h * (o.fg ? 1.35 : 1), [cx, cy, ok] = scr(v1.set(o.base.x, LPB + E / 2 + .02, o.base.z)); if (!ok) continue; const r = Math.max(10, E * .8 * ph / v1.distanceTo(camera.position)), d = Math.hypot(x - cx, y - cy) / r; if (d < 1 && d < bs) { bs = d; best = o; } }
+  for (const o of LP.values()) { if (o.dead) continue; const E = o.h, [cx, cy, ok] = scr(v1.set(o.base.x, LPB + E / 2 + .02, o.base.z)); if (!ok) continue; const r = Math.max(10, E * .8 * ph / v1.distanceTo(camera.position)), d = Math.hypot(x - cx, y - cy) / r; if (d < 1 && d < bs) { bs = d; best = o; } }
   return best; }
 TABS.lp = [['info', 'Proceso']];
 function selectLP(o) { S.lpSel = o; S.mode = 'lp'; renderPanel(); }

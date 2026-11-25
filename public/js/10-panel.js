@@ -14,8 +14,8 @@ function panelFrame(mode, name, path, cur) {
 function renderObjPanel() {
   const o = OB.sel, i = o.info, t = S.tabs.obj, el = $('#tab'); panelFrame('obj', i.name, i.path, t); builtFor = '';
   if (t === 'vista') {
-    const u = rawURL(i.path); let h = '<div class="acts" style="margin:0 0 12px"><button id="ob-view" class="on">' + IC('eye') + 'Abrir en el visor</button><span class="hint" style="align-self:center">o doble clic en el objeto</span></div>';
-    if (o.model) h += '<div class="note" style="padding:18px 4px">El modelo gira en el espacio junto a su carpeta. Doble clic en él para acercarte; arrastra para orbitar a su alrededor.</div>';
+    const u = rawURL(i.path); let h = '<div class="acts" style="margin:0 0 12px"><button id="ob-view" class="on">' + IC('eye') + 'Abrir en el visor</button><span class="hint" style="align-self:center">o Enter · clic derecho en el cubo para más</span></div>';
+    if (o.model) h += '<div class="note" style="padding:18px 4px">El modelo flota sobre su cubo cuando lo seleccionas. Enter o clic derecho › Girar para verlo de cerca; arrastra para darle la vuelta.</div>';
     else if (i.kind === 'image' && i.mime) h += `<img class="pv" src="${u}">`;
     else if (i.kind === 'video' && i.mime) h += `<video class="pv" src="${u}" controls muted loop autoplay></video>`;
     else if (i.kind === 'audio' && i.mime) h += `<canvas id="pvw" width="700" height="160" class="pv"></canvas><audio src="${u}" controls style="width:100%;margin-top:8px"></audio>`;
@@ -162,6 +162,7 @@ async function loadModel(o) {
   if (!OB.list.includes(o)) return disposeTree(obj);
   const bx = new THREE.Box3().setFromObject(obj), sz = bx.getSize(new THREE.Vector3()), c = bx.getCenter(new THREE.Vector3()), k = 2.2 / Math.max(sz.x, sz.y, sz.z, 1e-6);
   let tris = 0; obj.traverse(m => { if (m.isMesh) { const g = m.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3; } });
+  if (ext === 'obj' || ext === 'stl') obj.traverse(m => { if (m.isMesh) [].concat(m.material).forEach(x => { x.side = THREE.DoubleSide; if (ext === 'obj' && !x.map && x.color) x.color.set(0xb8c2c8); }); }); // loose meshes often come with mixed winding
   const g = new THREE.Group(); obj.position.sub(c); g.add(obj); g.scale.setScalar(k); g.userData.k0 = k; scene.add(g); o.model = g;
   o.mesh.material.opacity = 0; o.mesh.material.depthWrite = false; o.aspect = 1; i.dims = `${fmtN(Math.round(tris))} triángulos · ${sz.x.toFixed(2)} × ${sz.y.toFixed(2)} × ${sz.z.toFixed(2)}`; if (OB.sel === o) renderPanel();
 }
