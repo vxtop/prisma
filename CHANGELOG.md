@@ -2,35 +2,35 @@
 
 Todos los cambios importantes del proyecto. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/) y las versiones siguen [Semantic Versioning](https://semver.org/lang/es/).
 
-## [Unreleased] — Prisma
+## [Sin publicar] — Prisma
 
-### Added
-- Prompt bar to talk to Claude through the installed Claude Code (CLI or Claude Desktop), with every logged-in account, observe and work modes, transcript replay and draft persistence.
-- Cube inside cube: every folder is one solid cube (no longer 27 cells). A double click turns it into a glass case of its gem with each subfolder and each file inside as a cube of its own (files coloured by kind and sized by weight); a double click on a subfolder goes deeper, on a file opens the viewer, and Esc climbs back one level at a time, stopping at the top. Contents rise out of the cube and sink back into it.
-- Programs in «En vivo» are glass cases holding one small cube per process (edge: memory; the processes brighten and breathe with the CPU). In the System view each process is one cube.
-- Files inside a case: one click opens the file's card in the panel with a preview (text, image, video, audio, table, JSON or hex); **O** sorts by size, date or name; **/** searches and highlights matches; a cluster with more than 110 files gathers the rest in a summary cube that opens them all with a double click. Bursts of changes are re-listed so none is missed.
-- Inside a program: a double click on a program in «En vivo» opens its case with its processes (PID, RAM, CPU), its connections by remote host, the folders it uses and its modules (open files on macOS and Linux), refreshed every 3 s with births and deaths; a double click on one of its folders enters it.
-- Deleted files leave a ruby outline in their place for five minutes; **N** inside a folder shows only what was created or changed today.
-- Tasks view: programs are cubes (edge: memory) and each service is a glass cube holding its process when it runs.
-- Inside a case the contents are grouped in labelled clusters: subfolders, code, data, documents and media, executables, biggest first.
-- Live changes: what is created is born with an emerald flash, what is deleted turns ruby, drops and fades, what changes pulses, both inside the case and on the whole body of a closed cube.
-- Finish: every cube has thin lit edges in its own colour, files are more polished than folders, heavier folders are bigger, and top-level cubes sit next to others of the same gem.
-- Click and double click never overlap: the click waits for the double-click interval.
-- Empty folders are not entered (a notice says so); the gem is named on each label; the help legend lists the five gems.
-- One gem per cube: the whole cube takes the colour of what fills it (sapphire code, emerald data, gold documents and media, silver folders, ruby executables), and its windows, activity glow and shimmer follow it.
-- Work mode permissions: «Preguntar» shows each edit as a diff and waits for Permitir / Denegar, «Aceptar ediciones» applies them, «Planificar» only reads and plans.
-- `prisma_space` MCP tool so Claude can create, switch, rename and close spaces.
-- Hot reload (`npm run dev`): styles swap in place, the page reloads on client changes, the server restarts only when no assistant turn is running and every server file parses.
-- Prisma mark (triangular prism) and gem colour language: sapphire code, emerald data, gold documents and media, silver folders, ruby executables and errors, matte onyx surfaces, pearl text.
+### Añadido
+- Barra para hablar con Claude mediante el Claude Code instalado (CLI o Claude Desktop), con todas las cuentas con sesión iniciada, modos observar y trabajo, recuperación de la conversación y borrador que se conserva.
+- Cubo dentro de cubo: cada carpeta es un único cubo sólido (ya no 27 celdas). Un doble clic lo convierte en una vitrina de su gema, con cada subcarpeta y cada archivo como un cubo propio (los archivos, coloreados por tipo y con el tamaño según su peso); un doble clic en una subcarpeta baja un nivel, en un archivo abre el visor, y Esc sube de nivel en nivel hasta el primero. El contenido emerge del cubo y vuelve a hundirse en él.
+- Los programas de «En vivo» son vitrinas con un cubo pequeño por proceso (arista: memoria; los procesos brillan y respiran con la CPU). En la vista Sistema cada proceso es un cubo.
+- Archivos dentro de una vitrina: un clic abre la ficha del archivo en el panel con una vista previa (texto, imagen, vídeo, audio, tabla, JSON o hexadecimal); **O** ordena por tamaño, fecha o nombre; **/** busca y resalta las coincidencias; un grupo con más de 110 archivos reúne el resto en un cubo resumen que los abre todos con un doble clic. Las ráfagas de cambios se vuelven a listar para no perder ninguno.
+- Dentro de un programa: un doble clic en un programa de «En vivo» abre su vitrina con sus procesos (PID, RAM, CPU), sus conexiones por equipo remoto, las carpetas que usa y sus módulos (archivos abiertos en macOS y Linux), que se actualizan cada 3 s con altas y bajas; un doble clic en una de sus carpetas entra en ella.
+- Los archivos borrados dejan un contorno rubí en su sitio durante cinco minutos; **N** dentro de una carpeta muestra solo lo creado o cambiado hoy.
+- Vista Tareas: los programas son cubos (arista: memoria) y cada servicio es un cubo de cristal que contiene su proceso cuando está en marcha.
+- Dentro de una vitrina el contenido se agrupa en conjuntos con etiqueta: subcarpetas, código, datos, documentos y medios, y ejecutables, de mayor a menor.
+- Cambios en vivo: lo que se crea nace con un destello esmeralda, lo que se borra se vuelve rubí, cae y se desvanece, y lo que cambia late, tanto dentro de la vitrina como en todo el cuerpo de un cubo cerrado.
+- Acabado: cada cubo tiene aristas finas iluminadas de su color, los archivos están más pulidos que las carpetas, las carpetas más pesadas son más grandes y los cubos del primer nivel se colocan junto a los de su misma gema.
+- El clic y el doble clic nunca se solapan: el clic espera el intervalo del doble clic.
+- No se entra en las carpetas vacías (un aviso lo indica); cada etiqueta nombra su gema; la leyenda de la ayuda enumera las cinco gemas.
+- Una gema por cubo: el cubo entero toma el color de lo que lo llena (zafiro, código; esmeralda, datos; oro, documentos y medios; plata, carpetas; rubí, ejecutables), y sus ventanas, su brillo de actividad y sus destellos lo siguen.
+- Permisos del modo trabajo: «Preguntar» muestra cada edición como un diff y espera a Permitir / Denegar, «Aceptar ediciones» las aplica y «Planificar» solo lee y planifica.
+- Herramienta MCP `prisma_space` para que Claude cree, cambie, renombre y cierre espacios.
+- Recarga en caliente (`npm run dev`): los estilos se sustituyen al momento, la página se recarga con los cambios del cliente y el servidor se reinicia solo cuando no hay ningún turno del asistente en marcha y todos sus archivos se pueden interpretar.
+- Marca de Prisma (prisma triangular) y lenguaje de color por gemas: zafiro para código, esmeralda para datos, oro para documentos y medios, plata para carpetas, rubí para ejecutables y errores, superficies de ónice mate y texto perla.
 
-### Changed
-- Slices (X/Y/Z), exploding (E) and the per-cell figures are gone with the 27-cell body; the cell breakdown stays in the «Celdas» tab.
-- Renamed from vxtop to Prisma: data in `~/.prisma`, `PRISMA_PORT`, header `X-Prisma`, MCP tools `prisma_*`, default port 4828.
-- The app opens on an empty space; «En vivo» is one tab away.
-- Servers launched by the app never spawn a second server, stop their Claude turns on exit and exit with the development runner.
+### Cambiado
+- Los cortes (X/Y/Z), la vista explotada (E) y las cifras por celda desaparecen con el cuerpo de 27 celdas; el desglose por celdas sigue en la pestaña «Celdas».
+- Renombrado de vxtop a Prisma: datos en `~/.prisma`, `PRISMA_PORT`, cabecera `X-Prisma`, herramientas MCP `prisma_*` y puerto 4828 por defecto.
+- La aplicación se abre en un espacio vacío; «En vivo» está a una pestaña.
+- Los servidores que lanza la aplicación nunca inician un segundo servidor, detienen sus turnos de Claude al salir y terminan con el modo de desarrollo.
 
-### Removed
-- The vxtop website (`site/`) and the English README duplicate.
+### Eliminado
+- La web de vxtop (`site/`) y el README duplicado en inglés.
 
 ## [Sin publicar] (vxtop)
 

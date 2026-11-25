@@ -20,7 +20,7 @@ body { margin: 0; background: var(--bg); color: var(--tx); font: 17px/1.6 "Segoe
 a { color: var(--pearl); text-underline-offset: 3px; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 nav { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; padding-block: 18px; }
-nav img { width: 34px; height: 34px; } nav b { color: var(--pearl); font-size: 20px; margin-right: auto; }
+nav img { width: 34px; height: 34px; } nav > b { color: var(--pearl); font-size: 20px; margin-right: auto; }
 h1, h2, h3 { color: var(--pearl); line-height: 1.15; letter-spacing: -.02em; margin: 0; }
 header { padding-top: 56px; } h1 { font-size: clamp(38px, 6vw, 68px); max-width: 14ch; } header p { font-size: 20px; max-width: 58ch; margin: 20px 0 28px; }
 .btn { display: inline-block; padding: 11px 20px; border-radius: 7px; border: 1px solid var(--pearl); text-decoration: none; margin: 0 8px 8px 0; } .btn.p { background: var(--pearl); color: var(--bg); }
@@ -37,7 +37,7 @@ footer { margin-top: 96px; padding-block: 28px 48px; border-top: 1px solid var(-
 </head>
 <body>
 <div class="wrap">
-<nav aria-label="Principal"><img src="assets/logo.svg" alt=""><b>Prisma</b><a href="#diferencias">Prisma y vxtop</a><a href="#empezar">Empezar</a><a href="https://github.com/vxtop/prisma">GitHub</a></nav>
+<nav aria-label="Principal"><img src="assets/logo.svg" alt=""><b>Prisma</b><a href="#diferencias">Prisma y vxtop</a><a href="#empezar">Empezar</a><a href="https://github.com/vxtop/prisma">GitHub</a><span data-lang></span></nav>
 <header>
   <h1>Habla con Claude en un espacio 3D</h1>
   <p>Cada carpeta es un cubo. Lo que Claude mira se abre delante de ti, y, por defecto, cada cambio espera tu permiso.</p>
@@ -80,10 +80,89 @@ cd prisma
 node server.js        # http://127.0.0.1:4828/</pre>
   <p>Para probarlo con archivos ficticios, usa <code>npm run demo</code>. En Windows, <code>prisma.vbs</code> abre su propia ventana.</p>
   <p>El servidor solo escucha en tu equipo. Al usar el asistente, Claude Code envía a Anthropic lo que preguntas y lo que Claude consulta.</p>
-  <a class="btn" href="https://github.com/vxtop/prisma/blob/main/docs/guia.md">Leer la guía</a><a class="btn" href="https://github.com/vxtop/prisma/blob/main/docs/assistant.md">Cómo funciona el asistente</a>
+  <a class="btn" href="https://github.com/vxtop/prisma/blob/main/docs/guia.md">Leer la guía</a><a class="btn" href="https://github.com/vxtop/prisma/blob/main/docs/asistente.md">Cómo funciona el asistente</a>
 </section>
 </main>
 <footer><p>Prisma, proyecto de <a href="https://virtuanista.github.io/">virtuanista</a>. Apache 2.0. No está afiliado a Anthropic ni a Prisma ORM.</p><img src="https://open.soniditos.com/cat_footer.svg" alt="Gatito"><p>Copyright © 2026</p></footer>
 </div>
+<script>
+// Español por defecto; ?lang=en muestra la página en inglés.
+const EN = {
+ "Prisma: habla con Claude en un espacio 3D": "Prisma: talk to Claude in a 3D space",
+ "Principal": "Main",
+ "Prisma y vxtop": "Prisma and vxtop",
+ "Empezar": "Get started",
+ "Habla con Claude en un espacio 3D": "Talk to Claude in a 3D space",
+ "Cada carpeta es un cubo. Lo que Claude mira se abre delante de ti, y, por defecto, cada cambio espera tu permiso.": "Every folder is a cube. Whatever Claude looks at opens in front of you and, by default, every change waits for your permission.",
+ "Ver código": "View code",
+ "Carpetas y archivos como cubos de grafeno en el espacio de Prisma": "Folders and files as graphene cubes in the Prisma space",
+ "Pregunta, mira y decide": "Ask, watch and decide",
+ "Observar": "Observe",
+ "Es el modo por defecto. Claude solo puede mirar: inspecciona carpetas, archivos y procesos, y responde abriendo y enfocando cubos.": "The default mode. Claude can only look: it inspects folders, files and processes, and answers by opening and focusing cubes.",
+ "Interior de una carpeta, con los archivos agrupados por tipo": "Inside a folder, with files grouped by kind",
+ "Dentro de una carpeta, cada archivo es un cubo.": "Inside a folder, every file is a cube.",
+ "Permiso de edición con las líneas que cambian": "Edit permission with the lines that change",
+ "Captura de las pruebas: una edición denegada.": "Screenshot from the tests: a denied edit.",
+ "Trabajar": "Work",
+ "Claude edita solo dentro de la carpeta que elijas y nunca ejecuta programas. Puedes revisar cada cambio, aceptar las ediciones o pedir solo un plan.": "Claude edits only inside the folder you choose and never runs programs. You can review each change, accept the edits or ask only for a plan.",
+ "Dos proyectos, dos maneras de usarlos": "Two projects, two ways to use them",
+ "Prisma nació de": "Prisma grew out of",
+ "y ambos son de virtuanista. Se instalan por separado y no comparten datos.": "and both are by virtuanista. They are installed separately and share no data.",
+ "Para qué": "Purpose",
+ "Hablar y trabajar con Claude": "Talk and work with Claude",
+ "Observar qué hace tu equipo": "Watch what your computer does",
+ "Puede cambiar archivos": "Can change files",
+ "Sí, en modo trabajo y en una carpeta": "Yes, in work mode and in one folder",
+ "No, nunca": "No, never",
+ "Carpetas": "Folders",
+ "Cubos a los que se entra, con cubos dentro": "Cubes you enter, with cubes inside",
+ "Cubos de 27 celdas de datos": "Cubes of 27 data cells",
+ "Color": "Colour",
+ "El tipo de contenido, como gemas": "The kind of content, as gems",
+ "Quién toca cada archivo": "Who touches each file",
+ "Al abrir": "On opening",
+ "Un espacio vacío y la barra de Claude": "An empty space and the Claude bar",
+ "La vista en vivo del equipo": "The live view of the computer",
+ "Necesita Claude Code": "Needs Claude Code",
+ "Sí, para el asistente": "Yes, for the assistant",
+ "Puerto y datos": "Port and data",
+ "4828 y ~/.prisma": "4828 and ~/.prisma",
+ "4827 y ~/.vxtop": "4827 and ~/.vxtop",
+ "Un color para cada cosa": "One colour for each thing",
+ "Zafiro": "Sapphire",
+ "Código": "Code",
+ "Esmeralda": "Emerald",
+ "Datos": "Data",
+ "Oro": "Gold",
+ "Documentos y medios": "Documents and media",
+ "Plata": "Silver",
+ "Carpetas, unidades y otros programas": "Folders, drives and other programs",
+ "Rubí": "Ruby",
+ "Ejecutables, borrados y errores": "Executables, deletions and errors",
+ "Conserva su propio color": "Keeps its own colour",
+ "Necesitas Node.js 18.15 o superior y Chrome o Edge. Para el asistente, Claude Code con la sesión iniciada. Windows es la plataforma más completa, Linux funciona y macOS no está probado.": "You need Node.js 18.15 or later and Chrome or Edge. For the assistant, Claude Code with an open session. Windows is the most complete platform, Linux works and macOS is untested. The interface is in Spanish.",
+ "Para probarlo con archivos ficticios, usa": "To try it with made-up files, use",
+ ". En Windows,": ". On Windows,",
+ "abre su propia ventana.": "opens its own window.",
+ "El servidor solo escucha en tu equipo. Al usar el asistente, Claude Code envía a Anthropic lo que preguntas y lo que Claude consulta.": "The server only listens on your computer. When you use the assistant, Claude Code sends Anthropic what you ask and what Claude looks up.",
+ "Leer la guía": "Read the guide",
+ "Cómo funciona el asistente": "How the assistant works",
+ "Prisma, proyecto de": "Prisma, a project by",
+ ". Apache 2.0. No está afiliado a Anthropic ni a Prisma ORM.": ". Apache 2.0. Not affiliated with Anthropic or Prisma ORM.",
+ "Gatito": "Cat"
+};
+const LANG = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'es', tr = s => LANG === 'en' ? EN[s] ?? s : s;
+if (LANG === 'en') {
+  document.documentElement.lang = 'en';
+  for (const [a, b] of [['docs/guia.md', 'docs/en/guide.md'], ['docs/asistente.md', 'docs/assistant.md']]) document.querySelector(`[href$="${a}"]`).href = document.querySelector(`[href$="${a}"]`).href.replace(a, b); document.title = tr(document.title);
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; n = w.nextNode();) { const k = n.data.replace(/\s+/g, ' ').trim(); if (EN[k]) n.data = n.data.replace(/^(\s*)[\s\S]*?(\s*)$/, (_, a, b) => a + EN[k] + b); }
+  for (const el of document.querySelectorAll('[aria-label],[title],[alt],[placeholder]')) for (const a of ['aria-label', 'title', 'alt', 'placeholder']) if (EN[el.getAttribute(a)]) el.setAttribute(a, EN[el.getAttribute(a)]);
+}
+{ const b = document.createElement('p'); b.style.cssText = 'margin:0;font-size:15px';
+  b.innerHTML = LANG === 'en' ? '<a href="?lang=es" lang="es">Español</a> · <b>English</b>' : '<b>Español</b> · <a href="?lang=en" lang="en">English</a>';
+  b.querySelector('a').style.color = 'inherit'; (document.querySelector('[data-lang]') ?? document.body).append(b);
+  b.querySelector('a').addEventListener('click', e => { e.currentTarget.href = e.currentTarget.getAttribute('href').split('#')[0] + location.hash; }); }
+</script>
 </body>
 </html>

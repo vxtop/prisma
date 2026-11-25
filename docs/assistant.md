@@ -1,5 +1,7 @@
 # Assistant
 
+[Español](asistente.md) · **English**
+
 The prompt bar at the bottom of the space talks to Claude. Whatever Claude inspects is opened as cubes and brought
 into view, so the user watches the answer being built.
 

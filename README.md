@@ -1,79 +1,83 @@
 <p align="center"><img src="docs/assets/logo.svg" alt="" width="96"></p>
 
+<p align="center"><b>Español</b> · <a href="README.en.md">English</a></p>
+
 # Prisma
 
-**A 3D interface for Claude on your own computer.** You talk to Claude in a dark space; every folder is a cube,
-every program floats above them, and whatever Claude looks at or changes lights up in front of you.
+**Una interfaz 3D para Claude en tu propio equipo.** Hablas con Claude en un espacio oscuro: cada carpeta es un cubo,
+los programas flotan por encima y todo lo que Claude mira o cambia se ilumina delante de ti.
 
-Prisma is built on [vxtop](https://github.com/vxtop/vxtop) by virtuanista (see [NOTICE](NOTICE)).
+Prisma nace de [vxtop](https://github.com/vxtop/vxtop), de virtuanista (ver [NOTICE](NOTICE)).
 
-**[Website](https://vxtop.github.io/prisma/)** · Prisma and vxtop are two separate projects by the same author.
+**[Web](https://vxtop.github.io/prisma/)** · Prisma y vxtop son dos proyectos distintos de la misma autoría.
 
-![Folders and files as cubes in Prisma](docs/assets/hero.png)
+![Carpetas y archivos como cubos en Prisma](docs/assets/hero.png)
 
 | | Prisma | [vxtop](https://github.com/vxtop/vxtop) |
 |---|---|---|
-| Purpose | Talk to Claude and work with it | Watch what your computer is doing |
-| Can change files | Yes, in work mode, inside one folder | Never |
-| Folders | Cubes you enter, with cubes inside | Cubes of 27 data cells |
-| Colour means | The kind of content | Who touched each file |
-| Needs Claude Code | For the assistant | No |
-| Port and data | 4828, `~/.prisma` | 4827, `~/.vxtop` |
+| Para qué | Hablar con Claude y trabajar con él | Ver qué está haciendo tu equipo |
+| Puede cambiar archivos | Sí, en modo trabajo y dentro de una carpeta | Nunca |
+| Carpetas | Cubos a los que se entra, con cubos dentro | Cubos de 27 celdas de datos |
+| El color indica | El tipo de contenido | Quién ha tocado cada archivo |
+| Necesita Claude Code | Para el asistente | No |
+| Puerto y datos | 4828, `~/.prisma` | 4827, `~/.vxtop` |
 
-## What it does
+## Qué hace
 
-- **Talk to Claude from the space.** The prompt bar uses the Claude Code you already have installed and logged in
-  (standalone or the copy Claude Desktop downloads), with every account on the machine. No API keys, no login screen.
-- **Observe mode** (default): Claude can only look. It inspects folders, files, processes and AI sessions through a
-  read-only MCP server and shows its answer by opening cubes, focusing them and arranging spaces.
-- **Work mode**: Claude can edit files inside the folder of the selected cube, never outside it, and never runs
-  programs.
-- **Live view**: folders light up when something touches them; particles show who touched each file — Claude in its
-  own colour, you in pearl, other programs in silver.
-- **Systems, tasks, tree, gallery and viewers** inherited from vxtop, all read-only.
+- **Hablar con Claude desde el espacio.** La barra usa el Claude Code que ya tienes instalado y con la sesión iniciada
+  (el independiente o la copia que descarga Claude Desktop), con todas las cuentas del equipo. Sin claves de API ni
+  pantalla de inicio de sesión.
+- **Modo observar** (por defecto): Claude solo puede mirar. Inspecciona carpetas, archivos, procesos y sesiones de IA
+  con un servidor MCP de solo lectura, y responde abriendo cubos, enfocándolos y ordenando espacios.
+- **Modo trabajo**: Claude puede editar archivos dentro de la carpeta del cubo seleccionado, nunca fuera de ella, y
+  nunca ejecuta programas.
+- **Vista en vivo**: las carpetas se iluminan cuando algo las toca y unas partículas muestran quién ha tocado cada
+  archivo: Claude con su propio color, tú en perla y los demás programas en plata.
+- **Sistema, tareas, árbol, galería y visores** heredados de vxtop, todos de solo lectura.
 
-## Colour language
+## El lenguaje del color
 
-Colours name kinds of things and never change meaning:
+Cada color nombra un tipo de cosa y nunca cambia de significado:
 
-| Gem | Hex | Meaning |
+| Gema | Hex | Significado |
 |---|---|---|
-| Sapphire | `#1768B5` | Code |
-| Emerald | `#269B65` | Data |
-| Gold | `#E6B844` | Documents and media |
-| Silver | `#AEB9C5` | Folders, drives, other programs |
-| Ruby | `#C52235` | Executables, deletions and errors |
-| Onyx | `#252B35` | Surfaces: matte graphene cubes and panels |
-| Pearl | `#F0EBDD` | Text and your own activity |
+| Zafiro | `#1768B5` | Código |
+| Esmeralda | `#269B65` | Datos |
+| Oro | `#E6B844` | Documentos y medios |
+| Plata | `#AEB9C5` | Carpetas, unidades y otros programas |
+| Rubí | `#C52235` | Ejecutables, borrados y errores |
+| Ónice | `#252B35` | Superficies: cubos y paneles de grafeno mate |
+| Perla | `#F0EBDD` | Texto y tu propia actividad |
 
-Claude keeps its own colour (`#D97757`).
+Claude conserva su propio color (`#D97757`).
 
-## Requirements
+## Requisitos
 
-- Node.js 18.15 or later (no npm dependencies)
-- Chrome or Edge
-- Claude Code installed and logged in, for the assistant
-- Windows is the most complete platform; Linux works; macOS is untested
+- Node.js 18.15 o superior (sin dependencias de npm)
+- Chrome o Edge
+- Claude Code instalado y con la sesión iniciada, para el asistente
+- Windows es la plataforma más completa; Linux funciona; macOS no está probado
 
-## Run
+## Arrancar
 
 ```sh
 node server.js           # http://127.0.0.1:4828/
-npm run dev              # same, with hot reload of the interface and safe server restarts
+npm run dev              # lo mismo, con recarga en caliente de la interfaz y reinicios seguros del servidor
 ```
 
-On Windows, double-click `prisma.vbs` for a window of its own.
+En Windows, haz doble clic en `prisma.vbs` para abrirlo en su propia ventana.
 
-Data lives in `~/.prisma` (indexes, scenes, token, assistant sessions). Prisma never shares it with vxtop.
+Los datos están en `~/.prisma` (índices, escenas, token y sesiones del asistente). Prisma nunca los comparte con vxtop.
 
-## Documentation
+## Documentación
 
-- [Assistant](docs/assistant.md): installations, accounts, isolation, work mode, hot reload
-- [Architecture](docs/architecture.md) · [Guía (es)](docs/guia.md) · [Guide (en)](docs/en/guide.md)
+- [Asistente](docs/asistente.md): instalaciones, cuentas, aislamiento, modo trabajo y recarga en caliente
+- [Guía](docs/guia.md) · [Arquitectura](docs/arquitectura.md) · [Registro de cambios](CHANGELOG.md)
+- En inglés: [Assistant](docs/assistant.md) · [Guide](docs/en/guide.md) · [Architecture](docs/architecture.md)
 
-## License
+## Licencia
 
-[Apache-2.0](LICENSE). Keep [NOTICE](NOTICE) when redistributing.
+[Apache-2.0](LICENSE). Conserva [NOTICE](NOTICE) al redistribuir.
 
 <p align="center">
 	Repositorio generado por <a href="https://github.com/virtuanista" target="_blank">virtu 🎣</a>
